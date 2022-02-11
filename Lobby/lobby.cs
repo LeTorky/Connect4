@@ -21,6 +21,7 @@ namespace GameConfig
         private LobbyClient LobbyClient;
         private Thread ReadFromServerThread;
         private string[] StoredRooms = null;
+        int X = 3;
         #endregion
 
         #region Constructor
