@@ -21,7 +21,6 @@ namespace GameConfig
         private LobbyClient LobbyClient;
         private Thread ReadFromServerThread;
         private string[] StoredRooms = null;
-        int X = 3;
         #endregion
 
         #region Constructor
@@ -36,6 +35,8 @@ namespace GameConfig
         #endregion
 
         #region EventHandlers
+
+        #region Host Room
         private void CreateButton_Click(object sender, EventArgs e)
         {
             Config GameConfig = new Config();
@@ -43,9 +44,27 @@ namespace GameConfig
             result = GameConfig.ShowDialog();
             if (result == DialogResult.OK)
             {
+                LobbyClient.HostRoom(GameConfig.TokenColor, GameConfig.BoardSize);
                 this.Hide();
             }
         }
+        #endregion
+
+        #region Join Room
+
+        private void JoinRoom(object sender, EventArgs e)
+        {
+            string[] Socket = StoredRooms[((int)Math.Ceiling((double)Availablerooms.Controls.GetChildIndex((Control)sender) / 2))-1].Split(new string[] { "," }, StringSplitOptions.RemoveEmptyEntries)[0].Split(new string[] { ":" }, StringSplitOptions.RemoveEmptyEntries);
+            ReadFromServerThread.Abort();
+            LobbyClient.HostStream.Close();
+            LobbyClient.HostConnection.Close();
+            LobbyClient.HostConnection = new System.Net.Sockets.TcpClient();
+            LobbyClient.HostConnection.Connect(IPAddress.Parse(Socket[0]), 6500);
+            this.Hide();
+        }
+
+        #endregion  
+
         #endregion
 
         #region Methods
@@ -109,7 +128,7 @@ namespace GameConfig
 
                     SpecificRoom.RoomButton.Location = new Point(StartX + 235, StartY + i * 50);
                     SpecificRoom.RoomButton.BackColor = StoredRooms[i].Split(new string[] { "," }, StringSplitOptions.RemoveEmptyEntries)[2] != "started" ? Color.LightSeaGreen : Color.Black;
-                    //Delegate of button
+                    SpecificRoom.RoomButton.Click += JoinRoom; //Button Delegate
                     Rooms[i] = SpecificRoom;
                 }
             }

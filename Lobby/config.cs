@@ -18,11 +18,10 @@ namespace GameConfig
         {
             InitializeComponent();
         }
-        public Brush ColorToPlay //Color to play property
+        public Color TokenColor //Color to play property
         {
             get
             {
-
                 switch (comboBox2.Text)
                 {
                     case "Red":
@@ -31,14 +30,8 @@ namespace GameConfig
                     case "Green":
                         Token_Clr = Color.Green;
                         break;
-                    case "Yellow":
-                        Token_Clr = Color.Yellow;
-                        break;
-
                 }
-
-                Brush TokenBr = new SolidBrush(Token_Clr);
-                return TokenBr;
+                return Token_Clr;
 
             } //get color
         }
@@ -51,16 +44,7 @@ namespace GameConfig
         private void button2_Click(object sender, EventArgs e) //Ok button
         {
             DialogResult = DialogResult.OK;    //Store result ok in dialogresult
-            //open game form
-
-
-            //Acceptance a = new Acceptance();
-            //a.PName = "hager";
-            //a.ShowDialog();
-
-
             this.Close();    //Close config form
-
         }
 
         private void button3_Click(object sender, EventArgs e) //Cancel button

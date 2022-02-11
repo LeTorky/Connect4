@@ -108,7 +108,7 @@ namespace ConnectionClasses
             WriteToServerThread = new Thread(UpdateRoom);
             HostingThread = new Thread(ListenToConnections);
             HostIP = Dns.GetHostByName(Dns.GetHostName()).AddressList[0];
-            HostPort = 6500;
+            HostPort = 6500; //Change Port For Host Connection
             HostingConnection = new TcpListener(HostIP, HostPort);
             HostingConnection.Start();
             byte [] DecodedHost = Encoding.ASCII.GetBytes("Host: "+LobbyClientName);
