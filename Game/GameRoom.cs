@@ -11,6 +11,7 @@ using System.Windows.Forms;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.Window;
 using ConnectionClasses;
 using System.Net;
+using System.Threading;
 
 
 namespace GameRoomSpace
@@ -22,17 +23,20 @@ namespace GameRoomSpace
         private int[,] board;//The size of board
         private int turn;//Player 1 or player two
         public LobbyClient LobbyClient;
+        public Thread ReadRoomsThread;
         int RowNum;
         int ColNum;
         SolidBrush Token1_Color;
         Brush Token2_Color;
         Control Lobby;
+        string[] RoomPlayers;
         #endregion
 
         #region Constructor
         public GameRoom(LobbyClient SetLobbyClient, Color SetColor, string SetSize, Control SetLobby)
         {
             InitializeComponent();
+            Control.CheckForIllegalCrossThreadCalls = false;
             LobbyClient = SetLobbyClient;
             Lobby = SetLobby;
    
@@ -50,11 +54,14 @@ namespace GameRoomSpace
 
             if (LobbyClient.LobbyClientRole == LobbyRole.PlayerOne)
             {
-
+                ReadRoomsThread = new Thread(ReadPlayerOneList);
+                ReadRoomsThread.Start();
+                /*listBox1.DoubleClick += ;*/ //Add Event Handler
             }
             else
             {
-
+                ReadRoomsThread = new Thread(ReadPlayerTwoList);
+                ReadRoomsThread.Start();
             }
         }
         #endregion
@@ -73,12 +80,14 @@ namespace GameRoomSpace
                     SpecificConneciton.ClientSocket.Close();
                 }
                 LobbyClient.HostingThread.Abort();
+                ReadRoomsThread.Abort();
                 LobbyClient.HostStream.Close();
                 LobbyClient.HostConnection.Close();
                 LobbyClient.HostingConnection.Stop();
             }
             else
             {
+                ReadRoomsThread.Abort();
                 LobbyClient.HostStream.Close();
                 LobbyClient.HostConnection.Close();
                 this.Hide();
@@ -117,8 +126,86 @@ namespace GameRoomSpace
 
         #region Methods
 
-        #region UpdatePlayerList
+        #region Player One Read List
+        private void ReadPlayerOneList()
+        {
+            string[] LoadedRooms;
+            while (true)
+            {
+                lock (LobbyClient.HostClientConnections)
+                {
+                    LoadedRooms = new string[LobbyClient.HostClientConnections.Count];
+                    for(int i=0; i<LobbyClient.HostClientConnections.Count; i++)
+                    {
+                        LoadedRooms[i] = LobbyClient.HostClientConnections[i].ClientName;
+                    }
+                    if((RoomPlayers == null) || (LoadedRooms.Length != RoomPlayers.Length))
+                    {
+                        RoomPlayers = LoadedRooms;
+                        UpdatePlayerList();
+                    }
+                    else
+                    {
+                        int flag;
+                        for (flag = 0; (flag < LoadedRooms.Length) && (LoadedRooms[flag] == RoomPlayers[flag]); flag++);
+                        if (flag != LoadedRooms.Length)
+                        {
+                            RoomPlayers = LoadedRooms;
+                            UpdatePlayerList();
+                        }
+                    }
+                }
+                Thread.Sleep(1000);
+            }
+        }
+        #endregion
 
+        #region Player Two Read List
+        private void ReadPlayerTwoList()
+        {
+            string[] LoadedRooms;
+            while (true)
+            {
+                lock (LobbyClient.HostConnection)
+                {
+                    byte[] EncodedRooms = new byte[256];
+                    LobbyClient.HostStream.Read(EncodedRooms, 0, EncodedRooms.Length);
+                    if (Encoding.ASCII.GetString(EncodedRooms).Trim((char)0).Contains("Names:"))
+                    {
+                        LoadedRooms = Encoding.ASCII.GetString(EncodedRooms).Trim((char)0).Split(new string[] { "Names:" }, StringSplitOptions.RemoveEmptyEntries)[0].Split(new string[] { "," }, StringSplitOptions.RemoveEmptyEntries);
+                        if ((RoomPlayers == null) || (LoadedRooms.Length != RoomPlayers.Length))
+                        {
+                            RoomPlayers = LoadedRooms;
+                            UpdatePlayerList();
+                        }
+                        else
+                        {
+                            int flag;
+                            for (flag = 0; (flag < LoadedRooms.Length) && (LoadedRooms[flag] == RoomPlayers[flag]); flag++) ;
+                            if (flag != LoadedRooms.Length)
+                            {
+                                RoomPlayers = LoadedRooms;
+                                UpdatePlayerList();
+                            }
+                        }
+                    }
+                }
+                Thread.Sleep(1000);
+            }
+        }
+        #endregion
+
+        #region Update Player List
+        private void UpdatePlayerList()
+        {
+            lock(RoomPlayers){
+                listBox1.Items.Clear();
+                foreach (string Name in RoomPlayers)
+                {
+                    listBox1.Items.Add(Name);
+                }
+            }               
+        }
         #endregion
 
         #region GameLogic

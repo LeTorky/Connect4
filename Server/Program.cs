@@ -131,7 +131,14 @@ namespace Server
             while ((Connection.ClientSocket.Poll(1,SelectMode.SelectRead) != true) || (Connection.ClientSocket.Available != 0))
             {
                 EncodedRequest = new byte[1000];
-                Connection.ClientStream.Read(EncodedRequest, 0, EncodedRequest.Length);
+                try
+                {
+                    Connection.ClientStream.Read(EncodedRequest, 0, EncodedRequest.Length);
+                }
+                catch(Exception Obj)
+                {
+                   //When Connection Cuts Off While Reading for a Host Command.
+                }
                 Connection.ClientStream.Flush();
                 lock (HostingRemoteEnds) lock(SocketPairList) lock(Connection.ClientName)
                 {

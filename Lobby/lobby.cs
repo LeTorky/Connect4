@@ -77,6 +77,8 @@ namespace GameConfig
             LobbyClient.HostConnection = new System.Net.Sockets.TcpClient();
             LobbyClient.HostConnection.Connect(IPAddress.Parse(Socket[0]), 6500); //Change Port of Host
             LobbyClient.HostStream = LobbyClient.HostConnection.GetStream();
+            byte [] EncodedName = Encoding.ASCII.GetBytes(LobbyClient.LobbyClientName);
+            LobbyClient.HostStream.Write(EncodedName, 0, EncodedName.Length);
             GameRoom = new GameRoom(LobbyClient, TokenColor, RoomSize, this);
             this.Hide();
             GameRoom.Show();

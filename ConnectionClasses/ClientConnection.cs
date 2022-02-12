@@ -117,6 +117,7 @@ namespace ConnectionClasses
             HostingConnection.Start();
             TokenColor = SetColor;
             BoardSize = SetSize;
+            LobbyClientRole = LobbyRole.PlayerOne;
             byte [] DecodedHost = Encoding.ASCII.GetBytes("Host:"+LobbyClientName+";"+TokenColor.ToString().Split(new string[] { "[", "]", "Color", " "}, StringSplitOptions.RemoveEmptyEntries)[0]+";"+BoardSize+";");
             HostStream.Write(DecodedHost, 0, DecodedHost.Length);
             HostingThread.Start();
@@ -176,11 +177,12 @@ namespace ConnectionClasses
         #region Read Name From Client
         private void ReadClientName(object Client)
         {
-            lock (Client)
+            lock (HostClientConnections)
             {
                 ClientConnection ClientConn = (ClientConnection)Client;
                 byte[] EncodedName = new byte[256];
                 ClientConn.ClientStream.Read(EncodedName, 0, EncodedName.Length);
+                ClientConn.ClientStream.Flush();
                 ClientConn.ClientName = Encoding.ASCII.GetString(EncodedName).Trim((char)0);
             }
         }
@@ -189,21 +191,24 @@ namespace ConnectionClasses
         #region Write Name List To Clients
 
         private void WriteRoomInfo()
-        {
+        {       
             string NameList;
             while (true)
             {
                 lock (HostClientConnections)
                 {
-                    NameList = "Info:"+this.LobbyClientName;
+                    NameList = "Names:"+this.LobbyClientName;
                     foreach(ClientConnection SpecificConnection in HostClientConnections)
                     {
                         NameList += ("," + SpecificConnection.ClientName);
                     }
                     foreach (ClientConnection SpecificConnection in HostClientConnections)
                     {
+                        string[] RemoveList = NameList.Split(new string[] { "," + SpecificConnection.ClientName }, StringSplitOptions.RemoveEmptyEntries);
+                        NameList = (RemoveList.Length == 2) ? RemoveList[0] + RemoveList[1] : RemoveList[0];
                         byte[] EncodedNameList = Encoding.ASCII.GetBytes(NameList);
                         SpecificConnection.ClientStream.Write(EncodedNameList, 0, EncodedNameList.Length);
+                        NameList += ("," + SpecificConnection.ClientName);
                     }
                 }
                 Thread.Sleep(1000);
