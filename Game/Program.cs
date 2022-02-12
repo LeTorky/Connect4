@@ -4,7 +4,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace Trial_1
+namespace GameRoomSpace
 {
     static class Program
     {
@@ -16,8 +16,7 @@ namespace Trial_1
         {
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
-            Application.Run(new Form1());
-          
+            //Application.Run(new GameRoom());
         }
     }
 }

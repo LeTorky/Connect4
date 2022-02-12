@@ -10,6 +10,7 @@ using System.Windows.Forms;
 using ConnectionClasses;
 using System.Net;
 using System.Threading;
+using GameRoomSpace;
 
 namespace GameConfig
 {
@@ -20,6 +21,7 @@ namespace GameConfig
         #region Fields
         private LobbyClient LobbyClient;
         private Thread ReadFromServerThread;
+        private GameRoom GameRoom;
         private string[] StoredRooms = null;
         #endregion
 
@@ -36,6 +38,15 @@ namespace GameConfig
 
         #region EventHandlers
 
+        #region Disconnecting
+        private void Lobby_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            ReadFromServerThread.Abort();
+            LobbyClient.HostStream.Close();
+            LobbyClient.HostConnection.Close();
+        }
+        #endregion
+
         #region Host Room
         private void CreateButton_Click(object sender, EventArgs e)
         {
@@ -45,7 +56,9 @@ namespace GameConfig
             if (result == DialogResult.OK)
             {
                 LobbyClient.HostRoom(GameConfig.TokenColor, GameConfig.BoardSize);
+                GameRoom = new GameRoom(LobbyClient, GameConfig.TokenColor, GameConfig.BoardSize, this);
                 this.Hide();
+                GameRoom.Show();
             }
         }
         #endregion
@@ -54,13 +67,19 @@ namespace GameConfig
 
         private void JoinRoom(object sender, EventArgs e)
         {
-            string[] Socket = StoredRooms[((int)Math.Ceiling((double)Availablerooms.Controls.GetChildIndex((Control)sender) / 2))-1].Split(new string[] { "," }, StringSplitOptions.RemoveEmptyEntries)[0].Split(new string[] { ":" }, StringSplitOptions.RemoveEmptyEntries);
+            string[] HostInfo = StoredRooms[((int)Math.Ceiling((double)Availablerooms.Controls.GetChildIndex((Control)sender) / 2)) - 1].Split(new string[] { "," }, StringSplitOptions.RemoveEmptyEntries);
+            string [] Socket = HostInfo[0].Split(new string[] { ":" }, StringSplitOptions.RemoveEmptyEntries);
+            Color TokenColor = HostInfo[4] == "Green" ? Color.Orange : Color.Green;
+            string RoomSize = HostInfo[5];
             ReadFromServerThread.Abort();
             LobbyClient.HostStream.Close();
             LobbyClient.HostConnection.Close();
             LobbyClient.HostConnection = new System.Net.Sockets.TcpClient();
-            LobbyClient.HostConnection.Connect(IPAddress.Parse(Socket[0]), 6500);
+            LobbyClient.HostConnection.Connect(IPAddress.Parse(Socket[0]), 6500); //Change Port of Host
+            LobbyClient.HostStream = LobbyClient.HostConnection.GetStream();
+            GameRoom = new GameRoom(LobbyClient, TokenColor, RoomSize, this);
             this.Hide();
+            GameRoom.Show();
         }
 
         #endregion  
@@ -156,6 +175,7 @@ namespace GameConfig
         #endregion
 
         #endregion
+
     }
 
     #endregion

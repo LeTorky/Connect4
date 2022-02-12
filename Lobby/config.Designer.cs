@@ -143,6 +143,7 @@ namespace GameConfig
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(7F, 16F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
+            this.AutoSize = true;
             this.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(94)))), ((int)(((byte)(87)))), ((int)(((byte)(132)))));
             this.ClientSize = new System.Drawing.Size(304, 422);
             this.Controls.Add(this.panel1);
@@ -155,7 +156,7 @@ namespace GameConfig
             this.Icon = ((System.Drawing.Icon)(resources.GetObject("$this.Icon")));
             this.Name = "Config";
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
-            this.Text = "Connect4 Config";
+            this.Text = "Connect4";
             this.ResumeLayout(false);
             this.PerformLayout();
 

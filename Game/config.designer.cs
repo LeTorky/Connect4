@@ -1,5 +1,5 @@
 ﻿
-namespace Trial_1
+namespace GameRoomSpace
 {
     partial class Config
     {

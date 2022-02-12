@@ -38,6 +38,8 @@ namespace ConnectionClasses
         public int PlayerCount { get; set; }
         public GameStatus Status { get; set; }
         public string ClientName { get; set; }
+        public Color TokenColor { get; set; }
+        public string BoardSize { get; set; }
         #endregion
 
         #region Constructor
@@ -72,6 +74,7 @@ namespace ConnectionClasses
         public List<ClientConnection> HostClientConnections { get; set; }
         public Thread HostingThread { get; set; }
         public Thread WriteToServerThread { get; set; }
+        public Thread WriteToClients { get; set; }
         public GameStatus Status { get; set; }
         public IPAddress HostIP { get; set; }
         public int HostPort { get; set; }
@@ -106,27 +109,46 @@ namespace ConnectionClasses
         {
             HostClientConnections = new List<ClientConnection>();
             WriteToServerThread = new Thread(UpdateRoom);
+            WriteToClients = new Thread(WriteRoomInfo);
             HostingThread = new Thread(ListenToConnections);
             HostIP = Dns.GetHostByName(Dns.GetHostName()).AddressList[0];
             HostPort = 6500; //Change Port For Host Connection
             HostingConnection = new TcpListener(HostIP, HostPort);
             HostingConnection.Start();
-            byte [] DecodedHost = Encoding.ASCII.GetBytes("Host: "+LobbyClientName);
-            HostStream.Write(DecodedHost, 0, DecodedHost.Length);
             TokenColor = SetColor;
             BoardSize = SetSize;
-            WriteToServerThread.Start();
+            byte [] DecodedHost = Encoding.ASCII.GetBytes("Host:"+LobbyClientName+";"+TokenColor.ToString().Split(new string[] { "[", "]", "Color", " "}, StringSplitOptions.RemoveEmptyEntries)[0]+";"+BoardSize+";");
+            HostStream.Write(DecodedHost, 0, DecodedHost.Length);
             HostingThread.Start();
+            WriteToServerThread.Start();
+            WriteToClients.Start();
         }
         #endregion
 
         #region Update Room List
         public void UpdateRoom()
         {
+            Stack<int> RemoveSockets = new Stack<int>();
+            int RemoveStackCount;
             while (true)
             {
+                RemoveStackCount = 0;
+                RemoveSockets.Clear();
                 lock (HostClientConnections)lock(HostConnection)
                 {
+                    foreach(ClientConnection SpecificConnection in HostClientConnections)
+                    {
+                        if(SpecificConnection.ClientSocket.Poll(1, SelectMode.SelectRead) && (SpecificConnection.ClientSocket.Available == 0))
+                        {
+                            RemoveSockets.Push(HostClientConnections.IndexOf(SpecificConnection));
+                        }
+                    }
+                    foreach (int i in RemoveSockets)
+                    {
+                        HostClientConnections[i].ClientStream.Close();
+                        HostClientConnections[i].ClientSocket.Close();
+                        HostClientConnections.RemoveAt(i);
+                    }
                     byte[] DecodedUpdate = Encoding.ASCII.GetBytes($"Info:{HostClientConnections.Count+1},{Status}");
                     HostStream.Write(DecodedUpdate, 0, DecodedUpdate.Length);
                 }
@@ -145,10 +167,49 @@ namespace ConnectionClasses
                 lock (HostClientConnections)
                 {
                     HostClientConnections.Add(new ClientConnection(InsertSocket));
-                    //ThreadPool.QueueUserWorkItem(ReadHostRequest, HostClientConnections.Last<ClientConnection>());
+                    ThreadPool.QueueUserWorkItem(ReadClientName, HostClientConnections.Last<ClientConnection>());
                 }
             }
         }
+        #endregion
+
+        #region Read Name From Client
+        private void ReadClientName(object Client)
+        {
+            lock (Client)
+            {
+                ClientConnection ClientConn = (ClientConnection)Client;
+                byte[] EncodedName = new byte[256];
+                ClientConn.ClientStream.Read(EncodedName, 0, EncodedName.Length);
+                ClientConn.ClientName = Encoding.ASCII.GetString(EncodedName).Trim((char)0);
+            }
+        }
+        #endregion
+
+        #region Write Name List To Clients
+
+        private void WriteRoomInfo()
+        {
+            string NameList;
+            while (true)
+            {
+                lock (HostClientConnections)
+                {
+                    NameList = "Info:"+this.LobbyClientName;
+                    foreach(ClientConnection SpecificConnection in HostClientConnections)
+                    {
+                        NameList += ("," + SpecificConnection.ClientName);
+                    }
+                    foreach (ClientConnection SpecificConnection in HostClientConnections)
+                    {
+                        byte[] EncodedNameList = Encoding.ASCII.GetBytes(NameList);
+                        SpecificConnection.ClientStream.Write(EncodedNameList, 0, EncodedNameList.Length);
+                    }
+                }
+                Thread.Sleep(1000);
+            }
+        }
+
         #endregion
 
         #endregion

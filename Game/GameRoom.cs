@@ -9,62 +9,119 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement.Window;
+using ConnectionClasses;
+using System.Net;
 
-namespace Trial_1
+
+namespace GameRoomSpace
 {
-    public partial class Form1 : Form
+    public partial class GameRoom : Form
     {
+        #region Fields
         private Rectangle[] boardcolumns;
         private int[,] board;//The size of board
         private int turn;//Player 1 or player two
-
+        public LobbyClient LobbyClient;
         int RowNum;
         int ColNum;
-        Brush Token1_Color;
-        //Brush Token2_Color;
-        public Form1()
+        SolidBrush Token1_Color;
+        Brush Token2_Color;
+        Control Lobby;
+        #endregion
+
+        #region Constructor
+        public GameRoom(LobbyClient SetLobbyClient, Color SetColor, string SetSize, Control SetLobby)
         {
             InitializeComponent();
-
-            Config dlg = new Config();
-            DialogResult dResult;
-
-            dResult = dlg.ShowDialog();
-            if (dResult == DialogResult.OK)
-            {
-                String size = dlg.BoardSize;
-                string[] words = (size).Split('*');
+            LobbyClient = SetLobbyClient;
+            Lobby = SetLobby;
    
-                RowNum = int.Parse(words[0]);
-                ColNum = int.Parse(words[1]);
+            RowNum = int.Parse(SetSize.Split('*')[0]);
+            ColNum = int.Parse(SetSize.Split('*')[1]);
 
-                Token1_Color = dlg.ColorToPlay;
+            Token1_Color = new SolidBrush(SetColor);
+            Token2_Color = Token1_Color.Color == Color.Green ? Brushes.Orange : Brushes.Green; 
               
-                Invalidate();
-            }
-
+            Invalidate();
+     
             this.boardcolumns = new Rectangle[ColNum];
             this.board = new int[RowNum, ColNum];
             this.turn = 1;//player 1 will start
- 
+
+            if (LobbyClient.LobbyClientRole == LobbyRole.PlayerOne)
+            {
+
+            }
+            else
+            {
+
+            }
         }
-    
+        #endregion
+
+
+        #region Event Handlers
+
+        #region Closing Game
+        private void GameRoom_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            if (LobbyClient.LobbyClientRole == LobbyRole.PlayerOne)
+            {
+                foreach(ClientConnection SpecificConneciton in LobbyClient.HostClientConnections)
+                {
+                    SpecificConneciton.ClientStream.Close();
+                    SpecificConneciton.ClientSocket.Close();
+                }
+                LobbyClient.HostingThread.Abort();
+                LobbyClient.HostStream.Close();
+                LobbyClient.HostConnection.Close();
+                LobbyClient.HostingConnection.Stop();
+            }
+            else
+            {
+                LobbyClient.HostStream.Close();
+                LobbyClient.HostConnection.Close();
+                this.Hide();
+                LobbyClient.HostConnection = new System.Net.Sockets.TcpClient();
+                LobbyClient.HostConnection.Connect(IPAddress.Parse("192.168.0.107"), 5500);
+                LobbyClient.HostStream = LobbyClient.HostConnection.GetStream();
+                Lobby.Show();
+            }
+        }
+        #endregion
+
+        #region Mouse Click On GameBoard
+        private void Form1_MouseClick(object sender, MouseEventArgs e)
+        {
+            gamelogic(e.Location);
+        }
+        #endregion
+
+        #region Form Paint Event
         private void Form1_Paint(object sender, PaintEventArgs e)
         {
             e.Graphics.FillRectangle(Brushes.Blue, 25, 25, (340 * ColNum) / 7, (300 * RowNum) / 6);//Board size
             for (int i = 0; i < RowNum; i++)
             {
+                this.boardcolumns[i] = new Rectangle(45 + 45 * i, 24, 32, (300 * RowNum) / 6);//Board columns
                 for (int j = 0; j < ColNum; j++)
                 {
-                    if (i == 0)
-                    {
-                        this.boardcolumns[j] = new Rectangle(45 + 45 * j, 24, 32, (300 * RowNum) / 6);//Board columns
-                    }
                     e.Graphics.FillEllipse(Brushes.White, 45 + 45 * j, 50 + 45 * i, 32, 32);//Board tokens Location l
                 }
             }
-
         }
+        #endregion
+
+        #endregion
+
+
+        #region Methods
+
+        #region UpdatePlayerList
+
+        #endregion
+
+        #region GameLogic
         public void gamelogic(Point p)
         {
             int columnindex = this.columnnumber(p);
@@ -82,26 +139,22 @@ namespace Trial_1
                     else if (this.turn == 2)//player 2
                     {
                         Graphics g = CreateGraphics();
-                        g.FillEllipse(Brushes.Purple, 45 + 45 * columnindex, 50 + 45 * rowindex, 32, 32);
-
+                        g.FillEllipse(Token2_Color, 45 + 45 * columnindex, 50 + 45 * rowindex, 32, 32);
                     }
                     int winner = this.winplayer(this.turn);
                     if (winner != -1)//There is a winning player
                     {
                         string player = (winner == 1) ? "Player 1" : "Player 2";
                         MessageBox.Show("Congratulations! " + player + " has won!");
-                        Application.Restart();
+                        //Application.Restart(); Replace With Play Again?
                     }
                     playerturn();
                 }
             }
-
         }
+        #endregion
 
-        private void Form1_MouseClick(object sender, MouseEventArgs e)
-        {
-            gamelogic(e.Location);
-        }
+        #region PlayerTurn Switch
         private int playerturn()
         {
             if (this.turn == 1)
@@ -111,6 +164,9 @@ namespace Trial_1
 
             return this.turn;
         }
+        #endregion
+
+        #region Winning Logic
         private int winplayer(int playertocheck)
         {
             //1-Vertical Win check(|)
@@ -157,6 +213,9 @@ namespace Trial_1
 
             return -1;
         }
+        #endregion
+
+        #region Equal Number Method
         private bool AllnumberEqual(int tocheck,params int[] numbers)//to check if all numbers in this array is equal to checknumber
         {
             foreach(int num in numbers)
@@ -167,6 +226,9 @@ namespace Trial_1
             return true;
 
         }
+        #endregion
+
+        #region ColNumber
         private int columnnumber(Point mouse)
         {
             for(int i=0;i<boardcolumns.Length;i++)
@@ -183,8 +245,10 @@ namespace Trial_1
 
             }
             return -1;//if it is out side the board columns
-           
         }
+        #endregion
+
+        #region Empty Row
         private int Emptyrow(int col)//it takes the column where the coin will fall in
         {
             for(int i = RowNum - 1; i >= 0 ; i--)
@@ -194,10 +258,9 @@ namespace Trial_1
             }
             return -1;//incase column is full
         }
+        #endregion
 
-        private void Form1_Load(object sender, EventArgs e)
-        {
-           
-        }
+        #endregion
+
     }
 }

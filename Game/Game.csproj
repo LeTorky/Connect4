@@ -88,5 +88,11 @@
   <ItemGroup>
     <None Include="App.config" />
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\ConnectionClasses\ConnectionClasses.csproj">
+      <Project>{cb833bf5-438e-4f65-be0d-6e0a56071129}</Project>
+      <Name>ConnectionClasses</Name>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

@@ -8,7 +8,7 @@ using System.Net;
 using System.Threading;
 using System.IO;
 using ConnectionClasses;
-
+using System.Drawing;
 namespace Server
 {
     /*---------------------------------------------Program Class-------------------------------------------*/
@@ -82,10 +82,10 @@ namespace Server
             //Checking Disconnections to remove from Network Stream and SocketPair Lists, else update with Rooms Information.
             byte[] EncodedRooms;
             Stack<int> RemoveSockets = new Stack<int>();
-            int RemoveStackCount;
             string RoomInformation;
             while (true)
             {
+                RemoveSockets.Clear();
                 lock (SocketPairList) lock(HostingRemoteEnds)
                 { 
                     foreach(ClientConnection SpecificConnection in SocketPairList)
@@ -102,7 +102,7 @@ namespace Server
                             {
                                 foreach(ClientConnection HostConnection in HostingRemoteEnds)
                                 {
-                                    RoomInformation += (HostConnection.ClientSocket.RemoteEndPoint.ToString() + "," + HostConnection.ClientName.Trim((char)0) + "," + HostConnection.Status.ToString() + "," + HostConnection.PlayerCount.ToString() + ";");
+                                    RoomInformation += (HostConnection.ClientSocket.RemoteEndPoint.ToString() + "," + HostConnection.ClientName.Trim((char)0) + "," + HostConnection.Status.ToString() + "," + HostConnection.PlayerCount.ToString() + "," + HostConnection.TokenColor.ToString() + "," + HostConnection.BoardSize.ToString() + ";");
                                 }
                                 RoomInformation = RoomInformation == "" ? "Empty" : RoomInformation;
                                 EncodedRooms = Encoding.ASCII.GetBytes(RoomInformation);
@@ -110,13 +110,12 @@ namespace Server
                             }
                         }
                     }
-                    RemoveStackCount = RemoveSockets.Count();
-                    for(int i=0; i< RemoveStackCount; i++)
+                    foreach(int i in RemoveSockets)
                     {
-                        HostingRemoteEnds.Remove(SocketPairList[RemoveSockets.Peek()]);
-                        SocketPairList[RemoveSockets.Peek()].ClientStream.Close();
-                        SocketPairList[RemoveSockets.Peek()].ClientSocket.Close();
-                        SocketPairList.RemoveAt(RemoveSockets.Pop());
+                        HostingRemoteEnds.Remove(SocketPairList[i]);
+                        SocketPairList[i].ClientStream.Close();
+                        SocketPairList[i].ClientSocket.Close();
+                        SocketPairList.RemoveAt(i);
                     }
                 }
                 //Wait time to reinvoke thread
@@ -140,7 +139,11 @@ namespace Server
                     {
                         if (HostingRemoteEnds.Contains(Connection) == false)
                         {
-                            Connection.ClientName = Encoding.ASCII.GetString(EncodedRequest).Split(new string[] { "Host:" }, StringSplitOptions.RemoveEmptyEntries)[0];
+                            string[] HostString = Encoding.ASCII.GetString(EncodedRequest).Trim((char)0).Split(new string[] { "Host:" }, StringSplitOptions.RemoveEmptyEntries)[0].Split(new string[] { ";" }, StringSplitOptions.RemoveEmptyEntries);
+                            Console.WriteLine(Encoding.ASCII.GetString(EncodedRequest).Trim((char)0));
+                            Connection.ClientName = HostString[0];
+                            Connection.TokenColor = HostString[1] == "Green" ? Color.Green : Color.Orange;
+                            Connection.BoardSize = HostString[2];
                             HostingRemoteEnds.Add(Connection);
                             Console.WriteLine($"Host: {Connection.ClientSocket.RemoteEndPoint}");
                         }

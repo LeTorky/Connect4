@@ -8,7 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
 
-namespace Trial_1
+namespace GameRoomSpace
 {
     //private Color TokenColor;
     public partial class Config : Form
