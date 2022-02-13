@@ -12,6 +12,7 @@ using static System.Windows.Forms.VisualStyles.VisualStyleElement.Window;
 using ConnectionClasses;
 using System.Net;
 using System.Threading;
+using System.Net.Sockets;
 
 
 namespace GameRoomSpace
@@ -24,6 +25,7 @@ namespace GameRoomSpace
         private int turn;//Player 1 or player two
         public LobbyClient LobbyClient;
         public Thread ReadRoomsThread;
+        public ConfirmPlayerTwo ConfirmPlayerTwoDiag;
         int RowNum;
         int ColNum;
         SolidBrush Token1_Color;
@@ -56,7 +58,7 @@ namespace GameRoomSpace
             {
                 ReadRoomsThread = new Thread(ReadPlayerOneList);
                 ReadRoomsThread.Start();
-                /*listBox1.DoubleClick += ;*/ //Add Event Handler
+                listBox1.MouseDoubleClick += ChoosePlayerTwo; 
             }
             else
             {
@@ -92,7 +94,7 @@ namespace GameRoomSpace
                 LobbyClient.HostConnection.Close();
                 this.Hide();
                 LobbyClient.HostConnection = new System.Net.Sockets.TcpClient();
-                LobbyClient.HostConnection.Connect(IPAddress.Parse("192.168.0.107"), 5500);
+                LobbyClient.HostConnection.Connect(IPAddress.Parse("192.168.0.107"), 5500); //Change IP to Server IP
                 LobbyClient.HostStream = LobbyClient.HostConnection.GetStream();
                 Lobby.Show();
             }
@@ -121,10 +123,59 @@ namespace GameRoomSpace
         }
         #endregion
 
+        #region Choose Player Two
+
+        private void ChoosePlayerTwo(object sender, MouseEventArgs e)
+        {
+            ThreadPool.QueueUserWorkItem(SendPlayerTwoRequest);
+        }
+
+        #endregion
+
         #endregion
 
 
         #region Methods
+
+        #region Send Player Two Request
+
+        private void SendPlayerTwoRequest(object sender)
+        {
+            listBox1.MouseDoubleClick -= ChoosePlayerTwo;
+            lock (LobbyClient.HostClientConnections)
+            {
+                byte[] EncodedRequest = Encoding.ASCII.GetBytes("PlayRequest:");
+                byte[] EncodedResponse = new byte[265];
+                string DecodedResponse = "";
+                NetworkStream SelectedPlayerStream = LobbyClient.HostClientConnections[listBox1.SelectedIndex].ClientStream;
+                SelectedPlayerStream.Write(EncodedRequest, 0, EncodedRequest.Length);
+                try
+                {
+                    do
+                    {
+                        SelectedPlayerStream.Read(EncodedResponse, 0, EncodedResponse.Length);
+                        DecodedResponse = Encoding.ASCII.GetString(EncodedResponse).Trim((char)0);
+                    }
+                    while (!DecodedResponse.Contains("PlayRequest:"));
+                    SelectedPlayerStream.Flush();
+                    if (DecodedResponse.Split(new string[] { "PlayRequest:" }, StringSplitOptions.RemoveEmptyEntries)[0] == "Yes")
+                    {
+                        //Game Logic (Starts) 
+                    }
+                    else
+                    {
+                        listBox1.MouseDoubleClick += ChoosePlayerTwo;
+                    }
+                }
+                catch (Exception Obj)
+                {
+                    listBox1.MouseDoubleClick += ChoosePlayerTwo;
+                    //If Client Disconnects without writing
+                }
+            }
+        }
+
+        #endregion
 
         #region Player One Read List
         private void ReadPlayerOneList()
@@ -189,8 +240,26 @@ namespace GameRoomSpace
                             }
                         }
                     }
+                    else if(Encoding.ASCII.GetString(EncodedRooms).Trim((char)0).Contains("PlayRequest:"))
+                    {
+                        ConfirmPlayerTwoDiag = new ConfirmPlayerTwo();
+                        DialogResult Answer = ConfirmPlayerTwoDiag.ShowDialog();
+                        byte[] DecodedAnswer;
+                        if (Answer == DialogResult.Yes)
+                        {
+                            DecodedAnswer = Encoding.ASCII.GetBytes("PlayRequest:Yes");
+                            LobbyClient.LobbyClientRole = LobbyRole.PlayerTwo;
+                            //Game Logic (Starts)
+                        }
+                        else
+                        {
+                            DecodedAnswer = Encoding.ASCII.GetBytes("PlayRequest:No");
+                        }
+                        LobbyClient.HostStream.Write(DecodedAnswer, 0, DecodedAnswer.Length);
+                    }
+                    //Add Condition for Position to Invoke GDI
+                    LobbyClient.HostStream.Flush();
                 }
-                Thread.Sleep(1000);
             }
         }
         #endregion

@@ -29,7 +29,7 @@ namespace GameConfig
         public Lobby(string SetClientName)
         {
             InitializeComponent();
-            LobbyClient = new LobbyClient(IPAddress.Parse("192.168.0.107"), 5500, SetClientName);
+            LobbyClient = new LobbyClient(IPAddress.Parse("192.168.0.107"), 5500, SetClientName); //Change IP to server IP
             label2.Text = LobbyClient.LobbyClientName;
             ReadFromServerThread = new Thread(ReadHostList);
             ReadFromServerThread.Start();

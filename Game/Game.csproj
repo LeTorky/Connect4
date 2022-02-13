@@ -52,6 +52,12 @@
     <Compile Include="config.designer.cs">
       <DependentUpon>config.cs</DependentUpon>
     </Compile>
+    <Compile Include="ConfirmPlayerTwo.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="ConfirmPlayerTwo.Designer.cs">
+      <DependentUpon>ConfirmPlayerTwo.cs</DependentUpon>
+    </Compile>
     <Compile Include="GameRoom.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -62,6 +68,9 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
     <EmbeddedResource Include="config.resx">
       <DependentUpon>config.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="ConfirmPlayerTwo.resx">
+      <DependentUpon>ConfirmPlayerTwo.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="GameRoom.resx">
       <DependentUpon>GameRoom.cs</DependentUpon>
@@ -74,6 +83,7 @@
     <Compile Include="Properties\Resources.Designer.cs">
       <AutoGen>True</AutoGen>
       <DependentUpon>Resources.resx</DependentUpon>
+      <DesignTime>True</DesignTime>
     </Compile>
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
@@ -93,6 +103,12 @@
       <Project>{cb833bf5-438e-4f65-be0d-6e0a56071129}</Project>
       <Name>ConnectionClasses</Name>
     </ProjectReference>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\icon.png" />
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="Resources\Untitled-1.png" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
