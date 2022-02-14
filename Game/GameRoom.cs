@@ -26,6 +26,7 @@ namespace GameRoomSpace
         public LobbyClient LobbyClient;
         public Thread ReadRoomsThread;
         public ConfirmPlayerTwo ConfirmPlayerTwoDiag;
+        public ClientConnection PlayerTwoClient;
         int RowNum;
         int ColNum;
         SolidBrush Token1_Color;
@@ -58,16 +59,15 @@ namespace GameRoomSpace
             {
                 ReadRoomsThread = new Thread(ReadPlayerOneList);
                 ReadRoomsThread.Start();
-                listBox1.MouseDoubleClick += ChoosePlayerTwo; 
+                listBox1.MouseDoubleClick += ChoosePlayerTwo;
             }
             else
             {
-                ReadRoomsThread = new Thread(ReadPlayerTwoList);
+                ReadRoomsThread = new Thread(ReadPlayerTwoRequests);
                 ReadRoomsThread.Start();
             }
         }
         #endregion
-
 
         #region Event Handlers
 
@@ -104,20 +104,35 @@ namespace GameRoomSpace
         #region Mouse Click On GameBoard
         private void Form1_MouseClick(object sender, MouseEventArgs e)
         {
-            gamelogic(e.Location);
+            int columnindex = this.columnnumber(e.Location);
+            if (columnindex != -1)
+            {
+                int rowindex = this.Emptyrow(columnindex);
+                if (rowindex != -1)//incase the column is not full
+                {
+                    if(LobbyClient.LobbyClientRole == LobbyRole.PlayerOne)
+                    {
+                        ThreadPool.QueueUserWorkItem(PlayerOneWriteLocation, e.Location);
+                    }
+                    else
+                    {
+                        ThreadPool.QueueUserWorkItem(PlayerTwoWriteLocation, e.Location);
+                    }
+                }
+            }
         }
         #endregion
 
         #region Form Paint Event
         private void Form1_Paint(object sender, PaintEventArgs e)
         {
-            e.Graphics.FillRectangle(Brushes.Blue, 25, 25, (340 * ColNum) / 7, (300 * RowNum) / 6);//Board size
+            e.Graphics.FillRectangle(new SolidBrush(Color.FromArgb(77, 69, 97)), 25, 25, (340 * ColNum) / 7, (300 * RowNum) / 6);//Board size
             for (int i = 0; i < RowNum; i++)
             {
                 this.boardcolumns[i] = new Rectangle(45 + 45 * i, 24, 32, (300 * RowNum) / 6);//Board columns
                 for (int j = 0; j < ColNum; j++)
                 {
-                    e.Graphics.FillEllipse(Brushes.White, 45 + 45 * j, 50 + 45 * i, 32, 32);//Board tokens Location l
+                    e.Graphics.FillEllipse(new SolidBrush(Color.FromArgb(94, 87, 132)), 45 + 45 * j, 50 + 45 * i, 32, 32);//Board tokens Location l
                 }
             }
         }
@@ -133,7 +148,6 @@ namespace GameRoomSpace
         #endregion
 
         #endregion
-
 
         #region Methods
 
@@ -160,7 +174,10 @@ namespace GameRoomSpace
                     SelectedPlayerStream.Flush();
                     if (DecodedResponse.Split(new string[] { "PlayRequest:" }, StringSplitOptions.RemoveEmptyEntries)[0] == "Yes")
                     {
-                        //Game Logic (Starts) 
+                        //Game Logic (Starts)
+                        LobbyClient.HostClientConnections[listBox1.SelectedIndex].LobbyClientRole = LobbyRole.PlayerTwo;
+                        PlayerTwoClient = LobbyClient.HostClientConnections[listBox1.SelectedIndex];
+                        this.MouseClick += Form1_MouseClick;
                     }
                     else
                     {
@@ -211,8 +228,8 @@ namespace GameRoomSpace
         }
         #endregion
 
-        #region Player Two Read List
-        private void ReadPlayerTwoList()
+        #region Player Two Read Requests
+        private void ReadPlayerTwoRequests()
         {
             string[] LoadedRooms;
             while (true)
@@ -221,9 +238,10 @@ namespace GameRoomSpace
                 {
                     byte[] EncodedRooms = new byte[256];
                     LobbyClient.HostStream.Read(EncodedRooms, 0, EncodedRooms.Length);
-                    if (Encoding.ASCII.GetString(EncodedRooms).Trim((char)0).Contains("Names:"))
+                    string DecodedRooms = Encoding.ASCII.GetString(EncodedRooms).Trim((char)0);
+                    if (DecodedRooms.Contains("Names:"))
                     {
-                        LoadedRooms = Encoding.ASCII.GetString(EncodedRooms).Trim((char)0).Split(new string[] { "Names:" }, StringSplitOptions.RemoveEmptyEntries)[0].Split(new string[] { "," }, StringSplitOptions.RemoveEmptyEntries);
+                        LoadedRooms = DecodedRooms.Split(new string[] { "Names:" }, StringSplitOptions.RemoveEmptyEntries)[0].Split(new string[] { "," }, StringSplitOptions.RemoveEmptyEntries);
                         if ((RoomPlayers == null) || (LoadedRooms.Length != RoomPlayers.Length))
                         {
                             RoomPlayers = LoadedRooms;
@@ -240,7 +258,7 @@ namespace GameRoomSpace
                             }
                         }
                     }
-                    else if(Encoding.ASCII.GetString(EncodedRooms).Trim((char)0).Contains("PlayRequest:"))
+                    else if(DecodedRooms.Contains("PlayRequest:"))
                     {
                         ConfirmPlayerTwoDiag = new ConfirmPlayerTwo();
                         DialogResult Answer = ConfirmPlayerTwoDiag.ShowDialog();
@@ -257,7 +275,15 @@ namespace GameRoomSpace
                         }
                         LobbyClient.HostStream.Write(DecodedAnswer, 0, DecodedAnswer.Length);
                     }
-                    //Add Condition for Position to Invoke GDI
+                    else if (DecodedRooms.Contains("Location:"))
+                    {
+                        string [] point = DecodedRooms.Split(new string[] { "Location:" }, StringSplitOptions.RemoveEmptyEntries)[0].Split(',');
+                        gamelogic(new Point(int.Parse(point[0]), int.Parse(point[1])));
+                        if(LobbyClient.LobbyClientRole == LobbyRole.PlayerTwo)
+                        {
+                            this.MouseClick += Form1_MouseClick;
+                        }
+                    }
                     LobbyClient.HostStream.Flush();
                 }
             }
@@ -274,6 +300,59 @@ namespace GameRoomSpace
                     listBox1.Items.Add(Name);
                 }
             }               
+        }
+        #endregion
+
+        #region Player One Write Location
+
+        private void PlayerOneWriteLocation(object Obj)
+        {
+            Point p = (Point)Obj;
+            byte [] EncodedLocation = Encoding.ASCII.GetBytes($"Location:{p.X},{p.Y}");
+            byte[] EncodedPoint = new byte[265];
+            string DecodedPoint;
+            string[] point;
+            lock (LobbyClient.HostClientConnections)
+            {   
+                this.MouseClick -= Form1_MouseClick;
+                foreach(ClientConnection SpecificConnection in LobbyClient.HostClientConnections)
+                {
+                    SpecificConnection.ClientStream.Write(EncodedLocation, 0, EncodedLocation.Length);
+                }
+                gamelogic(p);
+                do
+                {
+                    PlayerTwoClient.ClientStream.Read(EncodedPoint, 0, EncodedPoint.Length);
+                    DecodedPoint = Encoding.ASCII.GetString(EncodedPoint).Trim((char)0);
+                }
+                while (!DecodedPoint.Contains("Location:"));
+                point = DecodedPoint.Split(new string[] { "Location:" }, StringSplitOptions.RemoveEmptyEntries)[0].Split(',');
+                gamelogic(new Point(int.Parse(point[0]), int.Parse(point[1])));
+                foreach (ClientConnection SpecificConnection in LobbyClient.HostClientConnections)
+                {
+                    if (SpecificConnection != PlayerTwoClient)
+                    {
+                        SpecificConnection.ClientStream.Write(EncodedLocation, 0, EncodedLocation.Length);
+                    }
+                }
+            }
+            this.MouseClick += Form1_MouseClick;
+        }
+
+        #endregion
+
+        #region Player Two Write Location
+        private void PlayerTwoWriteLocation(object Obj)
+        {
+            Point p = (Point)Obj;
+            byte[] EncodedLocation = Encoding.ASCII.GetBytes($"Location:{p.X},{p.Y}");
+            byte[] EncodedPoint = new byte[265];
+            lock (LobbyClient.HostStream)
+            {
+                LobbyClient.HostStream.Write(EncodedLocation, 0, EncodedLocation.Length);
+                this.MouseClick -= Form1_MouseClick;
+            }
+            gamelogic(p);
         }
         #endregion
 
@@ -297,10 +376,11 @@ namespace GameRoomSpace
                         Graphics g = CreateGraphics();
                         g.FillEllipse(Token2_Color, 45 + 45 * columnindex, 50 + 45 * rowindex, 32, 32);
                     }
+
                     int winner = this.winplayer(this.turn);
                     if (winner != -1)//There is a winning player
                     {
-                        string player = (winner == 1) ? "Player 1" : "Player 2";
+                        string player = (winner == 1) ? LobbyClient.LobbyClientName : PlayerTwoClient.ClientName;
                         MessageBox.Show("Congratulations! " + player + " has won!");
                         //Application.Restart(); Replace With Play Again?
                     }

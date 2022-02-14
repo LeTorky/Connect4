@@ -69,7 +69,7 @@ namespace GameConfig
         {
             string[] HostInfo = StoredRooms[((int)Math.Ceiling((double)Availablerooms.Controls.GetChildIndex((Control)sender) / 2)) - 1].Split(new string[] { "," }, StringSplitOptions.RemoveEmptyEntries);
             string [] Socket = HostInfo[0].Split(new string[] { ":" }, StringSplitOptions.RemoveEmptyEntries);
-            Color TokenColor = HostInfo[4] == "Green" ? Color.Orange : Color.Green;
+            Color TokenColor = HostInfo[4] == "Green" ? Color.Green : Color.Orange;
             string RoomSize = HostInfo[5];
             ReadFromServerThread.Abort();
             LobbyClient.HostStream.Close();

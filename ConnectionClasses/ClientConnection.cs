@@ -36,6 +36,7 @@ namespace ConnectionClasses
         public Socket ClientSocket { get; }
         public NetworkStream ClientStream { get; }
         public int PlayerCount { get; set; }
+        public LobbyRole LobbyClientRole { get; set; }
         public GameStatus Status { get; set; }
         public string ClientName { get; set; }
         public Color TokenColor { get; set; }
@@ -50,6 +51,7 @@ namespace ConnectionClasses
             PlayerCount = 0;
             Status = GameStatus.waiting;
             ClientName = "";
+            LobbyClientRole = LobbyRole.Audience;
         }
         #endregion
     }

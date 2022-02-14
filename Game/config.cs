@@ -52,16 +52,7 @@ namespace GameRoomSpace
         private void button2_Click(object sender, EventArgs e) //Ok button
         {
             DialogResult = DialogResult.OK;    //Store result ok in dialogresult
-            //open game form
-
-
-            //Acceptance a = new Acceptance();
-            //a.PName = "hager";
-            //a.ShowDialog();
-
-
             this.Close();    //Close config form
-
         }
 
         private void button3_Click(object sender, EventArgs e) //Cancel button
