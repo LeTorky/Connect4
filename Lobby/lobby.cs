@@ -20,7 +20,7 @@ namespace GameConfig
     {
         #region Fields
         private LobbyClient LobbyClient;
-        private Thread ReadFromServerThread;
+        public Thread ReadFromServerThread;
         private GameRoom GameRoom;
         private string[] StoredRooms = null;
         #endregion
@@ -56,7 +56,7 @@ namespace GameConfig
             if (result == DialogResult.OK)
             {
                 LobbyClient.HostRoom(GameConfig.TokenColor, GameConfig.BoardSize);
-                GameRoom = new GameRoom(LobbyClient, GameConfig.TokenColor, GameConfig.BoardSize, this);
+                GameRoom = new GameRoom(LobbyClient, GameConfig.TokenColor, GameConfig.BoardSize, this, LobbyClient.LobbyClientName, ReadFromServerThread);
                 this.Hide();
                 GameRoom.Show();
             }
@@ -67,24 +67,34 @@ namespace GameConfig
 
         private void JoinRoom(object sender, EventArgs e)
         {
-            string[] HostInfo = StoredRooms[((int)Math.Ceiling((double)Availablerooms.Controls.GetChildIndex((Control)sender) / 2)) - 1].Split(new string[] { "," }, StringSplitOptions.RemoveEmptyEntries);
-            string [] Socket = HostInfo[0].Split(new string[] { ":" }, StringSplitOptions.RemoveEmptyEntries);
-            Color TokenColor = HostInfo[4] == "Green" ? Color.Green : Color.Orange;
-            string RoomSize = HostInfo[5];
-            ReadFromServerThread.Abort();
-            LobbyClient.HostStream.Close();
-            LobbyClient.HostConnection.Close();
-            LobbyClient.HostConnection = new System.Net.Sockets.TcpClient();
-            LobbyClient.HostConnection.Connect(IPAddress.Parse(Socket[0]), 6500); //Change Port of Host
-            LobbyClient.HostStream = LobbyClient.HostConnection.GetStream();
-            byte [] EncodedName = Encoding.ASCII.GetBytes(LobbyClient.LobbyClientName);
-            LobbyClient.HostStream.Write(EncodedName, 0, EncodedName.Length);
-            GameRoom = new GameRoom(LobbyClient, TokenColor, RoomSize, this);
-            this.Hide();
-            GameRoom.Show();
+            try
+            {
+                string[] HostInfo = StoredRooms[((int)Math.Ceiling((double)Availablerooms.Controls.GetChildIndex((Control)sender) / 2)) - 1].Split(new string[] { "," }, StringSplitOptions.RemoveEmptyEntries);
+                string [] Socket = HostInfo[0].Split(new string[] { ":" }, StringSplitOptions.RemoveEmptyEntries);
+                Color TokenColor = HostInfo[4] == "Black" ? Color.White : Color.Black;
+                string RoomSize = HostInfo[5];
+                LobbyClient.LobbyClientRole = LobbyRole.Audience;
+                ReadFromServerThread.Suspend();
+                LobbyClient.HostStream.Close();
+                LobbyClient.HostConnection.Close();
+                LobbyClient.HostConnection = new System.Net.Sockets.TcpClient();
+                LobbyClient.HostConnection.Connect(IPAddress.Parse(Socket[0]), 6500); //Change Port of Host
+                LobbyClient.HostStream = LobbyClient.HostConnection.GetStream();
+                byte [] EncodedName = Encoding.ASCII.GetBytes(LobbyClient.LobbyClientName);
+                LobbyClient.HostStream.Write(EncodedName, 0, EncodedName.Length);
+                GameRoom = new GameRoom(LobbyClient, TokenColor, RoomSize, this, HostInfo[1], ReadFromServerThread);
+                this.Hide();
+                GameRoom.Show();
+            }
+            catch(Exception Exc)
+            {
+                MessageBox.Show("Room Unavailable");
+                LobbyClient = new LobbyClient(IPAddress.Parse("192.168.0.107"), 5500, label2.Text); //Change IP to server IP
+                ReadFromServerThread.Resume();
+            }
         }
 
-        #endregion  
+        #endregion
 
         #endregion
 
@@ -94,13 +104,20 @@ namespace GameConfig
         private void ReadHostList()
         {
             string[] LoadedRooms;
+
             while (true)
             {
                 if(LobbyClient.HostStream != null)
                 {
                     byte[] EncodedRooms = new byte[1000];
-
-                    LobbyClient.HostStream.Read(EncodedRooms, 0, EncodedRooms.Length);
+                    try
+                    {
+                        LobbyClient.HostStream.Read(EncodedRooms, 0, EncodedRooms.Length);
+                    }
+                    catch (Exception Obj)
+                    {
+                        //ReadFromServerThread.Abort();
+                    }
                     LoadedRooms = Encoding.ASCII.GetString(EncodedRooms).Trim((char)0).Split(new string[] { ";" }, StringSplitOptions.RemoveEmptyEntries);
 
                     if((StoredRooms == null) || StoredRooms.Length != LoadedRooms.Length)
@@ -133,28 +150,34 @@ namespace GameConfig
             int StartY = 0; //Y position of Room info W.R.T panel
 
             Room[] Rooms = null;
-
-            if (StoredRooms!= null && StoredRooms[0] != "Empty")
+            try
             {
-                Rooms = new Room[StoredRooms.Length];
-                for(int i=0; i<StoredRooms.Length; i++)
+                if (StoredRooms!= null && StoredRooms[0] != "Empty")
                 {
-                    Room SpecificRoom = new Room();
-                    SpecificRoom.RoomName.Location = new Point(StartX, StartY + i * 50 + 5); //location of label1 
-                    SpecificRoom.RoomName.Text = StoredRooms[i].Split(new string[] { "," }, StringSplitOptions.RemoveEmptyEntries)[1];  //from server
-                    SpecificRoom.RoomName.ForeColor = Color.White;
+                    Rooms = new Room[StoredRooms.Length];
+                    for(int i=0; i<StoredRooms.Length; i++)
+                    {
+                        Room SpecificRoom = new Room();
+                        SpecificRoom.RoomName.Location = new Point(StartX, StartY + i * 50 + 5); //location of label1 
+                        SpecificRoom.RoomName.Text = StoredRooms[i].Split(new string[] { "," }, StringSplitOptions.RemoveEmptyEntries)[1];  //from server
+                        SpecificRoom.RoomName.ForeColor = Color.White;
 
-                    SpecificRoom.PlayersNumber.Location = new Point(StartX+120, StartY + i * 50 + 5); //location of label 2
-                    SpecificRoom.PlayersNumber.Text = StoredRooms[i].Split(new string[] { "," }, StringSplitOptions.RemoveEmptyEntries)[3] + " Players"; //from server
+                        SpecificRoom.PlayersNumber.Location = new Point(StartX+120, StartY + i * 50 + 5); //location of label 2
+                        SpecificRoom.PlayersNumber.Text = StoredRooms[i].Split(new string[] { "," }, StringSplitOptions.RemoveEmptyEntries)[3] + " Players"; //from server
 
-                    SpecificRoom.RoomButton.Location = new Point(StartX + 235, StartY + i * 50);
-                    SpecificRoom.RoomButton.BackColor = StoredRooms[i].Split(new string[] { "," }, StringSplitOptions.RemoveEmptyEntries)[2] != "started" ? Color.LightSeaGreen : Color.Black;
-                    SpecificRoom.RoomButton.Click += JoinRoom; //Button Delegate
-                    Rooms[i] = SpecificRoom;
+                        SpecificRoom.RoomButton.Location = new Point(StartX + 235, StartY + i * 50);
+                        SpecificRoom.RoomButton.BackColor = StoredRooms[i].Split(new string[] { "," }, StringSplitOptions.RemoveEmptyEntries)[2] != "started" ? Color.LightSeaGreen : Color.Black;
+                        SpecificRoom.RoomButton.Click += JoinRoom; //Button Delegate
+                        Rooms[i] = SpecificRoom;
+                    }
                 }
-            }
 
-            Availablerooms.Invoke((MethodInvoker)delegate { UpdatePanel(Rooms); });
+                Availablerooms.Invoke((MethodInvoker)delegate { UpdatePanel(Rooms); });
+            }
+            catch (Exception Obj)
+            {
+                //If Room Entered is Wrong
+            }
         }
         #endregion
 

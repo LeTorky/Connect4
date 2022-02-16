@@ -46,12 +46,6 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="config.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="config.designer.cs">
-      <DependentUpon>config.cs</DependentUpon>
-    </Compile>
     <Compile Include="ConfirmPlayerTwo.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -64,16 +58,22 @@
     <Compile Include="GameRoom.Designer.cs">
       <DependentUpon>GameRoom.cs</DependentUpon>
     </Compile>
+    <Compile Include="PlayAgain.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="PlayAgain.Designer.cs">
+      <DependentUpon>PlayAgain.cs</DependentUpon>
+    </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <EmbeddedResource Include="config.resx">
-      <DependentUpon>config.cs</DependentUpon>
-    </EmbeddedResource>
     <EmbeddedResource Include="ConfirmPlayerTwo.resx">
       <DependentUpon>ConfirmPlayerTwo.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="GameRoom.resx">
       <DependentUpon>GameRoom.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="PlayAgain.resx">
+      <DependentUpon>PlayAgain.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>

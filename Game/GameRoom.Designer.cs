@@ -31,6 +31,8 @@ namespace GameRoomSpace
         {
             this.listBox1 = new System.Windows.Forms.ListBox();
             this.label1 = new System.Windows.Forms.Label();
+            this.label2 = new System.Windows.Forms.Label();
+            this.label3 = new System.Windows.Forms.Label();
             this.SuspendLayout();
             // 
             // listBox1
@@ -50,11 +52,35 @@ namespace GameRoomSpace
             this.label1.AutoSize = true;
             this.label1.Font = new System.Drawing.Font("Microsoft Sans Serif", 15F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
             this.label1.ForeColor = System.Drawing.Color.White;
-            this.label1.Location = new System.Drawing.Point(782, 20);
+            this.label1.Location = new System.Drawing.Point(779, 0);
             this.label1.Name = "label1";
             this.label1.Size = new System.Drawing.Size(105, 29);
             this.label1.TabIndex = 4;
             this.label1.Text = "Players";
+            // 
+            // label2
+            // 
+            this.label2.Anchor = System.Windows.Forms.AnchorStyles.None;
+            this.label2.AutoSize = true;
+            this.label2.Font = new System.Drawing.Font("Microsoft Sans Serif", 15F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label2.ForeColor = System.Drawing.Color.White;
+            this.label2.Location = new System.Drawing.Point(-1, 0);
+            this.label2.Name = "label2";
+            this.label2.Size = new System.Drawing.Size(141, 29);
+            this.label2.TabIndex = 5;
+            this.label2.Text = "PlayerOne";
+            // 
+            // label3
+            // 
+            this.label3.Anchor = System.Windows.Forms.AnchorStyles.None;
+            this.label3.AutoSize = true;
+            this.label3.Font = new System.Drawing.Font("Microsoft Sans Serif", 15F, System.Drawing.FontStyle.Bold, System.Drawing.GraphicsUnit.Point, ((byte)(0)));
+            this.label3.ForeColor = System.Drawing.Color.Gray;
+            this.label3.Location = new System.Drawing.Point(569, 0);
+            this.label3.Name = "label3";
+            this.label3.Size = new System.Drawing.Size(141, 29);
+            this.label3.TabIndex = 6;
+            this.label3.Text = "PlayerTwo";
             // 
             // GameRoom
             // 
@@ -62,6 +88,8 @@ namespace GameRoomSpace
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.BackColor = System.Drawing.Color.FromArgb(((int)(((byte)(94)))), ((int)(((byte)(87)))), ((int)(((byte)(132)))));
             this.ClientSize = new System.Drawing.Size(933, 554);
+            this.Controls.Add(this.label3);
+            this.Controls.Add(this.label2);
             this.Controls.Add(this.label1);
             this.Controls.Add(this.listBox1);
             this.Margin = new System.Windows.Forms.Padding(3, 4, 3, 4);
@@ -76,8 +104,10 @@ namespace GameRoomSpace
 
         #endregion
 
-        private System.Windows.Forms.ListBox listBox1;
+        public System.Windows.Forms.ListBox listBox1;
         private System.Windows.Forms.Label label1;
+        private System.Windows.Forms.Label label2;
+        public System.Windows.Forms.Label label3;
     }
 }
 

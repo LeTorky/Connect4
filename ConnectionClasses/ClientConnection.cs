@@ -97,123 +97,136 @@ namespace ConnectionClasses
         #region Methods
 
         #region Connect To Server
-        public void ConnectToServer(object SocketInfo)
+        public void ConnectToServer(object SocketInfo) //Connects to Main Server (Called Upon Construction).
         {
-            LobbyClientRole = LobbyRole.LobbyClient;
-            object[] SocketInfoArray = (object[])SocketInfo;
-            HostConnection.Connect((IPAddress)SocketInfoArray[0], (int)SocketInfoArray[1]);
-            HostStream = HostConnection.GetStream();
+            LobbyClientRole = LobbyRole.LobbyClient; //Inits Lobby as a Lobby Client Before Joining or Hosting a Room.
+            object[] SocketInfoArray = (object[])SocketInfo; //Casts SocketInfo Arg as an Object Array (Contains IP and Socket).
+            HostConnection.Connect((IPAddress)SocketInfoArray[0], (int)SocketInfoArray[1]); //Starts Connecting to Server.
+            HostStream = HostConnection.GetStream(); //Gets Servers Stream.
         }
         #endregion
 
         #region Host a Room
-        public void HostRoom(Color SetColor, string SetSize)
+        public void HostRoom(Color SetColor, string SetSize) //Starts Hosting a Room (Takes Chosen Color and Size).
         {
-            HostClientConnections = new List<ClientConnection>();
-            WriteToServerThread = new Thread(UpdateRoom);
-            WriteToClients = new Thread(WriteRoomInfo);
-            HostingThread = new Thread(ListenToConnections);
-            HostIP = Dns.GetHostByName(Dns.GetHostName()).AddressList[0];
-            HostPort = 6500; //Change Port For Host Connection
-            HostingConnection = new TcpListener(HostIP, HostPort);
-            HostingConnection.Start();
-            TokenColor = SetColor;
-            BoardSize = SetSize;
-            LobbyClientRole = LobbyRole.PlayerOne;
-            byte [] DecodedHost = Encoding.ASCII.GetBytes("Host:"+LobbyClientName+";"+TokenColor.ToString().Split(new string[] { "[", "]", "Color", " "}, StringSplitOptions.RemoveEmptyEntries)[0]+";"+BoardSize+";");
-            HostStream.Write(DecodedHost, 0, DecodedHost.Length);
-            HostingThread.Start();
-            WriteToServerThread.Start();
-            WriteToClients.Start();
+            TokenColor = SetColor; //Sets Token Color for Host.
+            BoardSize = SetSize; //Sets Board Size of the Game.
+            LobbyClientRole = LobbyRole.PlayerOne; //Sets Role to Player One upon Hosting.
+            HostIP = Dns.GetHostByName(Dns.GetHostName()).AddressList[0]; //Hosting Machine's IP to Host with.
+            HostPort = 6500; //Port Number to Host With (Change Upon preference or free Port).
+            HostingConnection = new TcpListener(HostIP, HostPort); //Creats a TCP Listiner for Hosting Connection.
+            HostClientConnections = new List<ClientConnection>(); //Creates a List of Clients that will Connect onto the Host.
+            HostingThread = new Thread(ListenToConnections); //Thread to start Listening for new Connections. (Not PoolThread to manually Abort).
+            WriteToServerThread = new Thread(UpdateRoom); //Thread to Update Server with Information. (Not PoolThread to manually Abort).
+            WriteToClients = new Thread(WriteRoomInfo); //Thread to Update Clients with Room Information. (Not PoolThread to manually Abort). 
+            HostingConnection.Start(); //Starts Host Connection.
+            byte [] DecodedHost = Encoding.ASCII //Prepares Hosting Message to Server to inform other players of this Room.
+                .GetBytes("Host:"+LobbyClientName+";"+TokenColor.ToString()
+                .Split(new string[] { "[", "]", "Color", " "}, StringSplitOptions.RemoveEmptyEntries)[0]+";"+BoardSize+";"); 
+            HostStream.Write(DecodedHost, 0, DecodedHost.Length); //Writes to server the Hosting Message.
+            HostingThread.Start(); //Starts listening for new Connection Thread.
+            WriteToServerThread.Start(); //Starts updating Server with new room Information Thread.
+            WriteToClients.Start(); //Starts updating Clients with latest Room Information.
         }
         #endregion
 
         #region Update Room List
         public void UpdateRoom()
         {
-            Stack<int> RemoveSockets = new Stack<int>();
-            int RemoveStackCount;
-            while (true)
+            Stack<int> RemoveSockets = new Stack<int>(); //A Stack to hold disconnected room index.
+            int RemoveStackCount; //Creating a counter to loop on.
+            while (true) //Maintain Thread Functionality.
             {
-                RemoveStackCount = 0;
-                RemoveSockets.Clear();
-                lock (HostClientConnections)lock(HostConnection)
+                RemoveStackCount = 0; //Initializing Counter with Zero
+                RemoveSockets.Clear(); //Clear Stack with each Iteration.
+                lock (HostClientConnections)lock(HostConnection) //Locks Client List and Connection with Server to prevent Updating Server with Old Information.
                 {
-                    foreach(ClientConnection SpecificConnection in HostClientConnections)
+                    foreach(ClientConnection SpecificConnection in HostClientConnections) //Looping on Each Client to Update it with Rooms Available.
                     {
-                        if(SpecificConnection.ClientSocket.Poll(1, SelectMode.SelectRead) && (SpecificConnection.ClientSocket.Available == 0))
+                        if(SpecificConnection.ClientSocket.Poll(1, SelectMode.SelectRead) && (SpecificConnection.ClientSocket.Available == 0)) //If Socket is Disconnected.
                         {
-                            RemoveSockets.Push(HostClientConnections.IndexOf(SpecificConnection));
+                            RemoveSockets.Push(HostClientConnections.IndexOf(SpecificConnection)); //Add disconnected Socket to Stack.
                         }
                     }
-                    foreach (int i in RemoveSockets)
+                    foreach (int i in RemoveSockets) //For loop on each entry in the Stack to Disconnect from it and Remove it from the Client List.
                     {
-                        HostClientConnections[i].ClientStream.Close();
-                        HostClientConnections[i].ClientSocket.Close();
-                        HostClientConnections.RemoveAt(i);
+                        HostClientConnections[i].ClientStream.Close(); //Closing disconnected Client Stream.
+                        HostClientConnections[i].ClientSocket.Close(); //Closing disconnected Client Socket Connection.
+                        HostClientConnections.RemoveAt(i); //Remove disconnected Client from Client List.
                     }
-                    byte[] DecodedUpdate = Encoding.ASCII.GetBytes($"Info:{HostClientConnections.Count+1},{Status}");
-                    HostStream.Write(DecodedUpdate, 0, DecodedUpdate.Length);
+                    byte[] DecodedUpdate = Encoding.ASCII.GetBytes($"Info:{HostClientConnections.Count+1},{Status}"); //Prepares Room Count Information and Game Status.
+                    HostStream.Write(DecodedUpdate, 0, DecodedUpdate.Length); //Writes to Server new Information.
                 }
-                Thread.Sleep(1000);
+                Thread.Sleep(1000); //Waits one second to restart Operation.
             }
         }
         #endregion
 
         #region Listen for new Connections
-        public void ListenToConnections()
+        public void ListenToConnections() //Listen for new Client Connections.
         {
-            Socket InsertSocket;
-            while (true)
+            Socket InsertSocket; //Socket Received Upon Accepting Connection.
+            while (true) //Maintains Funcitonality 
             {
-                InsertSocket = HostingConnection.AcceptSocket();
-                lock (HostClientConnections)
+                try
                 {
-                    HostClientConnections.Add(new ClientConnection(InsertSocket));
-                    ThreadPool.QueueUserWorkItem(ReadClientName, HostClientConnections.Last<ClientConnection>());
+                    InsertSocket = HostingConnection.AcceptSocket(); //Initializing the Socket.
+                    lock (HostClientConnections) //Locks Client Connection List to Prevent Manipulation While adding new Connection.
+                    {
+                        HostClientConnections.Add(new ClientConnection(InsertSocket)); //Adding New Connection to the List.
+                        ThreadPool.QueueUserWorkItem(ReadClientName, HostClientConnections.Last<ClientConnection>()); //Creating a Read Thread to Obtain Client Name.
+                    }
+                }
+                catch (Exception Obj)
+                {
+                    Thread.CurrentThread.Abort(); //On Disconnection of Host, Automatic Termination of Thread.
                 }
             }
         }
         #endregion
 
         #region Read Name From Client
-        private void ReadClientName(object Client)
+        private void ReadClientName(object Client) //Read Client Name Upon Connection to Host.
         {
-            lock (HostClientConnections)
+            lock (HostClientConnections) //Locks Client Connection List In order to edit Clients Name
             {
-                ClientConnection ClientConn = (ClientConnection)Client;
-                byte[] EncodedName = new byte[256];
-                ClientConn.ClientStream.Read(EncodedName, 0, EncodedName.Length);
-                ClientConn.ClientStream.Flush();
-                ClientConn.ClientName = Encoding.ASCII.GetString(EncodedName).Trim((char)0);
+                ClientConnection ClientConn = (ClientConnection)Client; //Converts Client Arg into a ClientConnection Object.
+                byte[] EncodedName = new byte[256]; //Encoded Name Buffer.
+                ClientConn.ClientStream.Read(EncodedName, 0, EncodedName.Length); //Read Into the Name Buffer.
+                ClientConn.ClientStream.Flush(); //Flush Clients Stream for Later Use.
+                ClientConn.ClientName = Encoding.ASCII.GetString(EncodedName).Trim((char)0); //Gets String From Buffer and Changes Client Name.
             }
         }
         #endregion
 
         #region Write Name List To Clients
 
-        private void WriteRoomInfo()
+        private void WriteRoomInfo() //Write Room Information to Client Connection List.
         {       
-            string NameList;
-            while (true)
+            string NameList; //Room Information String to be Sent.
+            while (true) // Maintains Functionality of Thread.
             {
-                lock (HostClientConnections)
+                lock (HostClientConnections) //Locks Client Connection List to prevent Manipulation or Addition While Sending Information.
                 {
-                    NameList = "Names:"+this.LobbyClientName;
-                    foreach(ClientConnection SpecificConnection in HostClientConnections)
+                    NameList = "Names:"+this.LobbyClientName; //Concats Names: Token to Notify Client that this is a Room Information String.
+                    foreach(ClientConnection SpecificConnection in HostClientConnections) //For Loops Each Connection in the List to Get Names.
                     {
-                        NameList += ("," + SpecificConnection.ClientName);
+                        NameList += ("," + SpecificConnection.ClientName); //Concats Each Client Name to the Name List.
                     }
-                    foreach (ClientConnection SpecificConnection in HostClientConnections)
+                    foreach (ClientConnection SpecificConnection in HostClientConnections) //For Loops on All Client Connections Again to Send List.
                     {
-                        string[] RemoveList = NameList.Split(new string[] { "," + SpecificConnection.ClientName }, StringSplitOptions.RemoveEmptyEntries);
-                        NameList = (RemoveList.Length == 2) ? RemoveList[0] + RemoveList[1] : RemoveList[0];
-                        byte[] EncodedNameList = Encoding.ASCII.GetBytes(NameList);
-                        SpecificConnection.ClientStream.Write(EncodedNameList, 0, EncodedNameList.Length);
-                        NameList += ("," + SpecificConnection.ClientName);
+                        string[] RemoveList = NameList.Split(new string[] { "," + SpecificConnection.ClientName }, //Splits String into an Array of Strings
+                            StringSplitOptions.RemoveEmptyEntries);// In Order to remove the Client Name of the Specific Connection so that He doesnt Receive his Name.
+                        NameList = (RemoveList.Length == 2) ? RemoveList[0] + RemoveList[1] : RemoveList[0]; //If Client Name was in the Middle then Concat it else then Array has One Element.
+                        byte[] EncodedNameList = Encoding.ASCII.GetBytes(NameList); // Get Encoded String Bytes
+                        if(!SpecificConnection.ClientSocket.Poll(1, SelectMode.SelectRead) || (SpecificConnection.ClientSocket.Available > 0)) // If Socket is Connected.
+                        {
+                            SpecificConnection.ClientStream.Write(EncodedNameList, 0, EncodedNameList.Length); //Write to Client Name List.
+                            NameList += ("," + SpecificConnection.ClientName);//Add to the Name List the Client Name we've removed.
+                        }
                     }
                 }
-                Thread.Sleep(1000);
+                Thread.Sleep(1000);// Thread Waits 1 second to repeat Write.
             }
         }
 

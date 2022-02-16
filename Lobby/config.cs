@@ -24,11 +24,11 @@ namespace GameConfig
             {
                 switch (comboBox2.Text)
                 {
-                    case "Orange":
-                        Token_Clr = Color.Orange;
+                    case "Black":
+                        Token_Clr = Color.Black;
                         break;
-                    case "Green":
-                        Token_Clr = Color.Green;
+                    case "White":
+                        Token_Clr = Color.White;
                         break;
                 }
                 return Token_Clr;

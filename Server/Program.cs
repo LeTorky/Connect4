@@ -128,7 +128,7 @@ namespace Server
         {
             ClientConnection Connection = (ClientConnection)SocketStreamPair;
             byte[] EncodedRequest;
-            while ((Connection.ClientSocket.Poll(1,SelectMode.SelectRead) != true) || (Connection.ClientSocket.Available != 0))
+            while ((Connection != null) && (Connection.ClientSocket.Poll(1,SelectMode.SelectRead) != true) || (Connection.ClientSocket.Available != 0))
             {
                 EncodedRequest = new byte[1000];
                 try
@@ -142,12 +142,11 @@ namespace Server
                 Connection.ClientStream.Flush();
                 lock (HostingRemoteEnds) lock(SocketPairList) lock(Connection.ClientName)
                 {
-                    if (Encoding.ASCII.GetString(EncodedRequest).Contains("Host"))
+                    if (Encoding.ASCII.GetString(EncodedRequest).Contains("Host:"))
                     {
                         if (HostingRemoteEnds.Contains(Connection) == false)
                         {
                             string[] HostString = Encoding.ASCII.GetString(EncodedRequest).Trim((char)0).Split(new string[] { "Host:" }, StringSplitOptions.RemoveEmptyEntries)[0].Split(new string[] { ";" }, StringSplitOptions.RemoveEmptyEntries);
-                            Console.WriteLine(Encoding.ASCII.GetString(EncodedRequest).Trim((char)0));
                             Connection.ClientName = HostString[0];
                             Connection.TokenColor = HostString[1] == "Green" ? Color.Green : Color.Orange;
                             Connection.BoardSize = HostString[2];
@@ -166,6 +165,25 @@ namespace Server
                         else
                         {
                             Connection.Status = GameStatus.waiting;
+                        }
+                    }
+                    else if(Encoding.ASCII.GetString(EncodedRequest).Contains("EndHost") && HostingRemoteEnds.Contains(Connection))
+                    {
+                        Console.WriteLine($"Host Ended: {Connection.ClientSocket.RemoteEndPoint}");
+                        HostingRemoteEnds.Remove(Connection);
+                    }
+                    else if(Encoding.ASCII.GetString(EncodedRequest).Contains("LeaveMidGame:") && HostingRemoteEnds.Contains(Connection))
+                    {
+                        string DecodedMessage = Encoding.ASCII.GetString(EncodedRequest).Trim((char)0).Split(new string[] { "LeaveMidGame:" }, StringSplitOptions.RemoveEmptyEntries)[0];
+                        string filePath = Path.GetFullPath("Score.txt");                        
+                        Console.WriteLine(@filePath.Replace(@"\", @"\\"));
+                        using (StreamWriter FileWriter = File.AppendText("E:\\Codes\\Visual C#\\Project\\Connect4\\Server\\Score.txt"))
+                        {
+                            FileWriter.WriteLine($"Player1 name'{Connection.ClientName}', Player2 name'{DecodedMessage}' {DateTime.Today}");
+                        }
+                        using (StreamWriter FileWriter = File.AppendText(filePath))
+                        {
+                            FileWriter.WriteLine($"Player1 name'{Connection.ClientName}', Player2 name'{DecodedMessage}' {DateTime.Today}");
                         }
                     }
                 }
