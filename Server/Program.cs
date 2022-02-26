@@ -131,14 +131,7 @@ namespace Server
             while ((Connection != null) && (Connection.ClientSocket.Poll(1,SelectMode.SelectRead) != true) || (Connection.ClientSocket.Available != 0))
             {
                 EncodedRequest = new byte[1000];
-                try
-                {
-                    Connection.ClientStream.Read(EncodedRequest, 0, EncodedRequest.Length);
-                }
-                catch(Exception Obj)
-                {
-                   //When Connection Cuts Off While Reading for a Host Command.
-                }
+                Connection.ClientStream.Read(EncodedRequest, 0, EncodedRequest.Length);
                 Connection.ClientStream.Flush();
                 lock (HostingRemoteEnds) lock(SocketPairList) lock(Connection.ClientName)
                 {
@@ -148,7 +141,7 @@ namespace Server
                         {
                             string[] HostString = Encoding.ASCII.GetString(EncodedRequest).Trim((char)0).Split(new string[] { "Host:" }, StringSplitOptions.RemoveEmptyEntries)[0].Split(new string[] { ";" }, StringSplitOptions.RemoveEmptyEntries);
                             Connection.ClientName = HostString[0];
-                            Connection.TokenColor = HostString[1] == "Green" ? Color.Green : Color.Orange;
+                            Connection.TokenColor = HostString[1] == "LightSeaGreen" ? Color.LightSeaGreen : Color.FromArgb(252, 175, 23);
                             Connection.BoardSize = HostString[2];
                             HostingRemoteEnds.Add(Connection);
                             Console.WriteLine($"Host: {Connection.ClientSocket.RemoteEndPoint}");
@@ -172,18 +165,76 @@ namespace Server
                         Console.WriteLine($"Host Ended: {Connection.ClientSocket.RemoteEndPoint}");
                         HostingRemoteEnds.Remove(Connection);
                     }
-                    else if(Encoding.ASCII.GetString(EncodedRequest).Contains("LeaveMidGame:") && HostingRemoteEnds.Contains(Connection))
+                    else if(Encoding.ASCII.GetString(EncodedRequest).Contains("Score:") && HostingRemoteEnds.Contains(Connection))
                     {
-                        string DecodedMessage = Encoding.ASCII.GetString(EncodedRequest).Trim((char)0).Split(new string[] { "LeaveMidGame:" }, StringSplitOptions.RemoveEmptyEntries)[0];
-                        string filePath = Path.GetFullPath("Score.txt");                        
-                        Console.WriteLine(@filePath.Replace(@"\", @"\\"));
-                        using (StreamWriter FileWriter = File.AppendText("E:\\Codes\\Visual C#\\Project\\Connect4\\Server\\Score.txt"))
+                        string[] DecodedMessage = new string[0];
+                        DecodedMessage = Encoding.ASCII.GetString(EncodedRequest).Trim((char)0).Split(new string[] { "Score:" }, StringSplitOptions.RemoveEmptyEntries)[0].Split('*');
+                        string filePath = Path.GetFullPath("Score.txt");
+                        string FileContent = File.ReadAllText("E:\\Codes\\Visual C#\\Project\\Connect4\\Server\\Score.txt");
+                        string ScoreStringOne = $"PlayerOne:{DecodedMessage[0].Split(',')[0]},PlayerTwo:{DecodedMessage[0].Split(',')[1]},Score:";
+                        string ScoreStringTwo = $"PlayerOne:{DecodedMessage[0].Split(',')[1]},PlayerTwo:{DecodedMessage[0].Split(',')[0]},Score:";
+                        int ScoreIndexOne = FileContent.IndexOf(ScoreStringOne);
+                        int ScoreIndexTwo = FileContent.IndexOf(ScoreStringTwo);
+                        int SemiColumnIndex;
+                        if (ScoreIndexOne!= -1)
                         {
-                            FileWriter.WriteLine($"Player1 name'{Connection.ClientName}', Player2 name'{DecodedMessage}' {DateTime.Today}");
+                            SemiColumnIndex = FileContent.IndexOf(';', ScoreIndexOne + ScoreStringOne.Length);
+                            string[] ScoreArray = FileContent.Substring(ScoreIndexOne + ScoreStringOne.Length, SemiColumnIndex - ScoreIndexOne - ScoreStringOne.Length).Split(',');
+                            int ScoreOne = int.Parse(ScoreArray[0]);
+                            int ScoreTwo = int.Parse(ScoreArray[1]);
+                            Console.WriteLine($"{ScoreArray[0]},{ScoreArray[1]}");
+                            int ScoreOneIndex = FileContent.IndexOf(ScoreArray[0], ScoreIndexOne + ScoreStringOne.Length);
+                            int CommaIndex = FileContent.IndexOf(',', ScoreOneIndex);
+                            int ScoreTwoIndex = FileContent.IndexOf(ScoreArray[1], CommaIndex);
+                            switch (DecodedMessage[1])
+                            {
+                                case "1":
+                                    ScoreOne++;
+                                    FileContent = FileContent.Remove(ScoreOneIndex, ScoreArray[0].Length).Insert(ScoreOneIndex, ScoreOne.ToString());
+                                    break;
+                                case "2":
+                                Console.WriteLine("2");
+                                    ScoreTwo++;
+                                    FileContent = FileContent.Remove(ScoreTwoIndex, ScoreArray[1].Length).Insert(ScoreTwoIndex, ScoreTwo.ToString());
+                                    break;
+                            }
+                            File.WriteAllText("E:\\Codes\\Visual C#\\Project\\Connect4\\Server\\Score.txt", FileContent);
+                            ScoreIndexTwo = FileContent.IndexOf($"PlayerOne:{DecodedMessage[0].Split(',')[1]},PlayerTwo:{DecodedMessage[0].Split(',')[0]},Score:");
                         }
-                        using (StreamWriter FileWriter = File.AppendText(filePath))
+                        if (ScoreIndexTwo!= -1)
                         {
-                            FileWriter.WriteLine($"Player1 name'{Connection.ClientName}', Player2 name'{DecodedMessage}' {DateTime.Today}");
+                            SemiColumnIndex = FileContent.IndexOf(';', ScoreIndexTwo + ScoreStringTwo.Length);
+                            string[] ScoreArray = FileContent.Substring(ScoreIndexTwo + ScoreStringTwo.Length, SemiColumnIndex - ScoreIndexTwo - ScoreStringTwo.Length).Split(',');
+                            int ScoreOne = int.Parse(ScoreArray[0]);
+                            int ScoreTwo = int.Parse(ScoreArray[1]);
+                            int ScoreOneIndex = FileContent.IndexOf(ScoreArray[0], ScoreIndexTwo + ScoreStringTwo.Length);
+                            int ScoreTwoIndex = FileContent.IndexOf(ScoreArray[1], ScoreIndexTwo + ScoreStringTwo.Length);
+                            switch (DecodedMessage[1])
+                            {
+                                case "1":
+                                    ScoreOne++;
+                                    FileContent = FileContent.Remove(ScoreOneIndex, ScoreArray[0].Length).Insert(ScoreOneIndex, ScoreOne.ToString());
+                                    break;
+                                case "2":
+                                    ScoreTwo++;
+                                    FileContent = FileContent.Remove(ScoreTwoIndex, ScoreArray[1].Length).Insert(ScoreTwoIndex, ScoreTwo.ToString());
+                                    break;
+                            }
+                            File.WriteAllText("E:\\Codes\\Visual C#\\Project\\Connect4\\Server\\Score.txt", FileContent);
+                        }
+                        if(ScoreIndexTwo == -1 && ScoreIndexOne == -1)
+                        {
+                            switch (DecodedMessage[1])
+                            {
+                                case "1":
+                                    File.AppendAllText("E:\\Codes\\Visual C#\\Project\\Connect4\\Server\\Score.txt",
+                                    $"\nPlayerOne:{DecodedMessage[0].Split(',')[0]},PlayerTwo:{DecodedMessage[0].Split(',')[1]},Score:1,0;");
+                                    break;
+                                case "2":
+                                    File.AppendAllText("E:\\Codes\\Visual C#\\Project\\Connect4\\Server\\Score.txt",
+                                    $"\nPlayerOne:{DecodedMessage[0].Split(',')[0]},PlayerTwo:{DecodedMessage[0].Split(',')[1]},Score:0,1;");
+                                    break;
+                            }
                         }
                     }
                 }

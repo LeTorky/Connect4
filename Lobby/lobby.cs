@@ -21,16 +21,17 @@ namespace GameConfig
         #region Fields
         private LobbyClient LobbyClient;
         public Thread ReadFromServerThread;
-        private GameRoom GameRoom;
+        private GameBoard GameRoom;
         private string[] StoredRooms = null;
+        private Notifications Notification;
         #endregion
 
         #region Constructor
         public Lobby(string SetClientName)
         {
             InitializeComponent();
-            LobbyClient = new LobbyClient(IPAddress.Parse("192.168.0.107"), 5500, SetClientName); //Change IP to server IP
-            label2.Text = LobbyClient.LobbyClientName;
+            LobbyClient = new LobbyClient(IPAddress.Parse("192.168.0.106"), 5500, SetClientName); //Change IP to server IP
+            label2.Text = LobbyClient.GameClientName;
             ReadFromServerThread = new Thread(ReadHostList);
             ReadFromServerThread.Start();
         }
@@ -42,8 +43,19 @@ namespace GameConfig
         private void Lobby_FormClosing(object sender, FormClosingEventArgs e)
         {
             ReadFromServerThread.Abort();
-            LobbyClient.HostStream.Close();
-            LobbyClient.HostConnection.Close();
+            LobbyClient.ClientToHostStream.Close();
+            LobbyClient.ClientToHostConnection.Close();
+        }
+        #endregion
+
+        #region Show Event Handler
+        private void Lobby_VisibleChanged(object sender, System.EventArgs e)
+        {
+            if (this.Visible && ReadFromServerThread.IsAlive == false)
+            {
+                ReadFromServerThread = new Thread(ReadHostList);
+                ReadFromServerThread.Start();
+            }
         }
         #endregion
 
@@ -56,7 +68,7 @@ namespace GameConfig
             if (result == DialogResult.OK)
             {
                 LobbyClient.HostRoom(GameConfig.TokenColor, GameConfig.BoardSize);
-                GameRoom = new GameRoom(LobbyClient, GameConfig.TokenColor, GameConfig.BoardSize, this, LobbyClient.LobbyClientName, ReadFromServerThread);
+                GameRoom = new GameBoard(LobbyClient ,GameConfig.BoardSize, GameConfig.TokenColor, LobbyClient.GameClientName, this);
                 this.Hide();
                 GameRoom.Show();
             }
@@ -71,26 +83,30 @@ namespace GameConfig
             {
                 string[] HostInfo = StoredRooms[((int)Math.Ceiling((double)Availablerooms.Controls.GetChildIndex((Control)sender) / 2)) - 1].Split(new string[] { "," }, StringSplitOptions.RemoveEmptyEntries);
                 string [] Socket = HostInfo[0].Split(new string[] { ":" }, StringSplitOptions.RemoveEmptyEntries);
-                Color TokenColor = HostInfo[4] == "Black" ? Color.White : Color.Black;
+                Color TokenColor = HostInfo[4].Contains("LightSeaGreen") ? Color.LightSeaGreen : Color.FromArgb(252, 175, 23);
+                string HostName = HostInfo[1];
                 string RoomSize = HostInfo[5];
-                LobbyClient.LobbyClientRole = LobbyRole.Audience;
-                ReadFromServerThread.Suspend();
-                LobbyClient.HostStream.Close();
-                LobbyClient.HostConnection.Close();
-                LobbyClient.HostConnection = new System.Net.Sockets.TcpClient();
-                LobbyClient.HostConnection.Connect(IPAddress.Parse(Socket[0]), 6500); //Change Port of Host
-                LobbyClient.HostStream = LobbyClient.HostConnection.GetStream();
-                byte [] EncodedName = Encoding.ASCII.GetBytes(LobbyClient.LobbyClientName);
-                LobbyClient.HostStream.Write(EncodedName, 0, EncodedName.Length);
-                GameRoom = new GameRoom(LobbyClient, TokenColor, RoomSize, this, HostInfo[1], ReadFromServerThread);
+                LobbyClient.GameClientRole = LobbyRole.Audience;
+                ReadFromServerThread.Abort();
+                LobbyClient.ClientToHostStream.Close();
+                LobbyClient.ClientToHostConnection.Close();
+                LobbyClient.ClientToHostConnection = new System.Net.Sockets.TcpClient();
+                LobbyClient.ClientToHostConnection.Connect(IPAddress.Parse(Socket[0]), 6500); //Change Port of Host
+                LobbyClient.ClientToHostStream = LobbyClient.ClientToHostConnection.GetStream();
+                byte [] EncodedName = Encoding.ASCII.GetBytes(LobbyClient.GameClientName);
+                LobbyClient.ClientToHostStream.Write(EncodedName, 0, EncodedName.Length);
+                GameRoom = new GameBoard(LobbyClient, RoomSize, TokenColor, HostName, this);
                 this.Hide();
                 GameRoom.Show();
             }
             catch(Exception Exc)
             {
-                MessageBox.Show("Room Unavailable");
-                LobbyClient = new LobbyClient(IPAddress.Parse("192.168.0.107"), 5500, label2.Text); //Change IP to server IP
-                ReadFromServerThread.Resume();
+                LobbyClient = new LobbyClient(IPAddress.Parse("192.168.0.106"), 5500, label2.Text); //Change IP to server IP
+                ReadFromServerThread = new Thread(ReadHostList);
+                ReadFromServerThread.Start();
+                Notification = new Notifications();
+                Notification.label1.Text = "Room UnAvailable...";
+                Notification.Show();
             }
         }
 
@@ -107,12 +123,12 @@ namespace GameConfig
 
             while (true)
             {
-                if(LobbyClient.HostStream != null)
+                if(LobbyClient.ClientToHostStream != null)
                 {
                     byte[] EncodedRooms = new byte[1000];
                     try
                     {
-                        LobbyClient.HostStream.Read(EncodedRooms, 0, EncodedRooms.Length);
+                        LobbyClient.ClientToHostStream.Read(EncodedRooms, 0, EncodedRooms.Length);
                     }
                     catch (Exception Obj)
                     {

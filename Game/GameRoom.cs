@@ -20,9 +20,6 @@ namespace GameRoomSpace
     public partial class GameRoom : Form
     {
         #region Fields
-        public Rectangle[] boardcolumns;
-        public int[,] board;//The size of board
-        public int turn;//Player 1 or player two
         private List<string> MoveStack;
         private string HostName;
         public string PlayerTwo;
@@ -32,13 +29,16 @@ namespace GameRoomSpace
         public ConfirmPlayerTwo ConfirmPlayerTwoDiag;
         public ClientConnection PlayerTwoClient;
         private PlayAgain WinningDiag;
+        public Rectangle[] boardcolumns;
+        public int[,] board;//The size of board
+        public int turn;//Player 1 or player two
         public int RowNum;
         public int ColNum;
         SolidBrush Token1_Color;
         Brush Token2_Color;
+        public Graphics g;
         public Control Lobby;
         string[] RoomPlayers;
-        public Graphics g;
         #endregion
 
         #region Constructor
@@ -69,7 +69,7 @@ namespace GameRoomSpace
             this.board = new int[RowNum, ColNum];
             this.turn = 1;//player 1 will start
 
-            switch (LobbyClient.LobbyClientRole)
+            switch (LobbyClient.GameClientRole)
             {
                 case LobbyRole.PlayerOne:
                     ReadRoomsThread = new Thread(ReadPlayerOneList);
@@ -90,42 +90,42 @@ namespace GameRoomSpace
         #region Closing Game
         private void GameRoom_FormClosing(object sender, FormClosingEventArgs e)
         {
-            if (LobbyClient.LobbyClientRole == LobbyRole.PlayerOne)
+            if (LobbyClient.GameClientRole == LobbyRole.PlayerOne)
             {
-                if(LobbyClient.Status == GameStatus.started)
+                if(LobbyClient.CurrentStatus == GameStatus.started)
                 {
                     WriteToServerMidGame();
                 }
                 byte[] EncodedDisconnection = Encoding.ASCII.GetBytes("EndHost");
-                LobbyClient.HostStream.Write(EncodedDisconnection, 0, EncodedDisconnection.Length);
+                LobbyClient.ClientToHostStream.Write(EncodedDisconnection, 0, EncodedDisconnection.Length);
                 LobbyClient.WriteToServerThread.Abort();
-                LobbyClient.WriteToClients.Abort();
-                LobbyClient.ConnectingThread.Abort();
+                LobbyClient.WriteToClientsThread.Abort();
+                LobbyClient.ConnectingToHostOrServerThread.Abort();
                 ReadRoomsThread.Abort();
-                foreach (ClientConnection SpecificConneciton in LobbyClient.HostClientConnections)
+                foreach (ClientConnection SpecificConneciton in LobbyClient.ConnectedClientsList)
                 {
                     SpecificConneciton.ClientStream.Write(EncodedDisconnection, 0, EncodedDisconnection.Length);
                     SpecificConneciton.ClientStream.Close();
                     SpecificConneciton.ClientSocket.Close();
                 }
-                LobbyClient.HostingConnection.Stop();
-                LobbyClient.HostClientConnections.Clear();
+                LobbyClient.HostToClientConnection.Stop();
+                LobbyClient.ConnectedClientsList.Clear();
                 Lobby.Show();
                 this.Hide();
             }
             else
             {
-                if((LobbyClient.LobbyClientRole == LobbyRole.PlayerTwo) && (LobbyClient.Status == GameStatus.started))
+                if((LobbyClient.GameClientRole == LobbyRole.PlayerTwo) && (LobbyClient.CurrentStatus == GameStatus.started))
                 {
                     byte[] EncodedDisconnection = Encoding.ASCII.GetBytes("EndConnection");
-                    LobbyClient.HostStream.Write(EncodedDisconnection, 0, EncodedDisconnection.Length);
+                    LobbyClient.ClientToHostStream.Write(EncodedDisconnection, 0, EncodedDisconnection.Length);
                 }
                 ReadRoomsThread.Abort();
-                LobbyClient.HostStream.Close();
-                LobbyClient.HostConnection.Close();
-                LobbyClient.HostConnection = new TcpClient();
-                LobbyClient.HostConnection.Connect(IPAddress.Parse("192.168.0.107"), 5500); //Change IP to Server IP
-                LobbyClient.HostStream = LobbyClient.HostConnection.GetStream();
+                LobbyClient.ClientToHostStream.Close();
+                LobbyClient.ClientToHostConnection.Close();
+                LobbyClient.ClientToHostConnection = new TcpClient();
+                LobbyClient.ClientToHostConnection.Connect(IPAddress.Parse("192.168.0.107"), 5500); //Change IP to Server IP
+                LobbyClient.ClientToHostStream = LobbyClient.ClientToHostConnection.GetStream();
                 LobbyReadThread.Resume();
                 Lobby.Show();
                 this.Hide();
@@ -142,7 +142,7 @@ namespace GameRoomSpace
                 int rowindex = this.Emptyrow(columnindex);
                 if (rowindex != -1)//incase the column is not full
                 {
-                    if(LobbyClient.LobbyClientRole == LobbyRole.PlayerOne)
+                    if(LobbyClient.GameClientRole == LobbyRole.PlayerOne)
                     {
                         ThreadPool.QueueUserWorkItem(PlayerOnePlayAndRead, e.Location);
                     }
@@ -187,10 +187,10 @@ namespace GameRoomSpace
 
         private void WriteToServerMidGame() //Writing to Server that Game Ended MidWay.
         {
-            lock (LobbyClient.HostStream) //Locks Stream between Host and Server to prevent Sending Data at Same Time.
+            lock (LobbyClient.ClientToHostStream) //Locks Stream between Host and Server to prevent Sending Data at Same Time.
             {
                 byte[] LeaveMessage = Encoding.ASCII.GetBytes($"LeaveMidGame:{PlayerTwoClient.ClientName}"); //Prepares Message with Player Two Name.
-                LobbyClient.HostStream.Write(LeaveMessage, 0, LeaveMessage.Length); //Sends Server New Message
+                LobbyClient.ClientToHostStream.Write(LeaveMessage, 0, LeaveMessage.Length); //Sends Server New Message
             }
         }
 
@@ -201,7 +201,7 @@ namespace GameRoomSpace
         private void SendPlayerTwoRequest(object sender)
         {
             listBox1.MouseDoubleClick -= ChoosePlayerTwo;
-            lock (LobbyClient.HostClientConnections)
+            lock (LobbyClient.ConnectedClientsList)
             {
                 byte[] EncodedRequest = Encoding.ASCII.GetBytes("PlayRequest:");
                 byte[] EncodedResponse = new byte[265];
@@ -212,7 +212,7 @@ namespace GameRoomSpace
                 {
                     try
                     {
-                        SelectedClient = LobbyClient.HostClientConnections[listBox1.SelectedIndex];
+                        SelectedClient = LobbyClient.ConnectedClientsList[listBox1.SelectedIndex];
                         flag = false;
                     }
                     catch(Exception Exc)
@@ -235,17 +235,17 @@ namespace GameRoomSpace
                     SelectedPlayerStream.Flush();
                     if (DecodedResponse.Split(new string[] { "PlayRequest:" }, StringSplitOptions.RemoveEmptyEntries)[0] == "Yes")
                     {
-                        LobbyClient.Status = GameStatus.started;
-                        LobbyClient.HostClientConnections[listBox1.SelectedIndex].LobbyClientRole = LobbyRole.PlayerTwo;
-                        PlayerTwoClient = LobbyClient.HostClientConnections[listBox1.SelectedIndex];
+                        LobbyClient.CurrentStatus = GameStatus.started;
+                        LobbyClient.ConnectedClientsList[listBox1.SelectedIndex].LobbyClientRole = LobbyRole.PlayerTwo;
+                        PlayerTwoClient = LobbyClient.ConnectedClientsList[listBox1.SelectedIndex];
                         PlayerTwo = PlayerTwoClient.ClientName;
                         label3.Text = PlayerTwo;
                         this.MouseClick += Form1_MouseClick;
                         ThreadPool.QueueUserWorkItem(PlayerOneWriteLocation);
                         ThreadPool.QueueUserWorkItem(PlayerTwoDisconnect);
-                        foreach (ClientConnection SpecificConnectin in LobbyClient.HostClientConnections)
+                        foreach (ClientConnection SpecificConnectin in LobbyClient.ConnectedClientsList)
                         {
-                            byte[] PlayerTwo = Encoding.ASCII.GetBytes($"PlayerTwo:{LobbyClient.HostClientConnections[listBox1.SelectedIndex].ClientName}");
+                            byte[] PlayerTwo = Encoding.ASCII.GetBytes($"PlayerTwo:{LobbyClient.ConnectedClientsList[listBox1.SelectedIndex].ClientName}");
                             SpecificConnectin.ClientStream.Write(PlayerTwo, 0, PlayerTwo.Length);
                         }
                     }
@@ -270,12 +270,12 @@ namespace GameRoomSpace
             string[] LoadedRooms;
             while (true)
             {
-                lock (LobbyClient.HostClientConnections)
+                lock (LobbyClient.ConnectedClientsList)
                 {
-                    LoadedRooms = new string[LobbyClient.HostClientConnections.Count];
-                    for(int i=0; i<LobbyClient.HostClientConnections.Count; i++)
+                    LoadedRooms = new string[LobbyClient.ConnectedClientsList.Count];
+                    for(int i=0; i<LobbyClient.ConnectedClientsList.Count; i++)
                     {
-                        LoadedRooms[i] = LobbyClient.HostClientConnections[i].ClientName;
+                        LoadedRooms[i] = LobbyClient.ConnectedClientsList[i].ClientName;
                     }
                     if((RoomPlayers == null) || (LoadedRooms.Length != RoomPlayers.Length))
                     {
@@ -304,10 +304,10 @@ namespace GameRoomSpace
             string[] LoadedRooms;
             while (true)
             {
-                lock (LobbyClient.HostConnection)
+                lock (LobbyClient.ClientToHostConnection)
                 {
                     byte[] EncodedRooms = new byte[256];
-                    LobbyClient.HostStream.Read(EncodedRooms, 0, EncodedRooms.Length);
+                    LobbyClient.ClientToHostStream.Read(EncodedRooms, 0, EncodedRooms.Length);
                     string DecodedRooms = Encoding.ASCII.GetString(EncodedRooms).Trim((char)0);
                     if (DecodedRooms.Contains("Names:"))
                     {
@@ -336,15 +336,15 @@ namespace GameRoomSpace
                         if (Answer == DialogResult.Yes)
                         {
                             DecodedAnswer = Encoding.ASCII.GetBytes("PlayRequest:Yes");
-                            LobbyClient.LobbyClientRole = LobbyRole.PlayerTwo;
-                            LobbyClient.Status = GameStatus.started;
+                            LobbyClient.GameClientRole = LobbyRole.PlayerTwo;
+                            LobbyClient.CurrentStatus = GameStatus.started;
                             //Game Logic (Starts)
                         }
                         else
                         {
                             DecodedAnswer = Encoding.ASCII.GetBytes("PlayRequest:No");
                         }
-                        LobbyClient.HostStream.Write(DecodedAnswer, 0, DecodedAnswer.Length);
+                        LobbyClient.ClientToHostStream.Write(DecodedAnswer, 0, DecodedAnswer.Length);
                     }
                     else if (DecodedRooms.Contains("Location:"))
                     {
@@ -359,7 +359,7 @@ namespace GameRoomSpace
                                 MoveStack.Add(points[i]);
                                 gamelogic(point);
                             }
-                            if(LobbyClient.LobbyClientRole == LobbyRole.PlayerTwo && turn == 2)
+                            if(LobbyClient.GameClientRole == LobbyRole.PlayerTwo && turn == 2)
                             {
                                 this.MouseClick += Form1_MouseClick;
                             }
@@ -378,7 +378,7 @@ namespace GameRoomSpace
                     {
                         ResetGameLogic();
                     }
-                    LobbyClient.HostStream.Flush();
+                    LobbyClient.ClientToHostStream.Flush();
                 }
             }
         }
@@ -387,7 +387,8 @@ namespace GameRoomSpace
         #region Update Player List
         private void UpdatePlayerList()
         {
-            lock(RoomPlayers){
+            lock(RoomPlayers)
+            {
                 listBox1.Items.Clear();
                 foreach (string Name in RoomPlayers)
                 {
@@ -446,9 +447,9 @@ namespace GameRoomSpace
         {
             while (!PlayerTwoClient.ClientSocket.Poll(1, SelectMode.SelectRead) || (PlayerTwoClient.ClientSocket.Available > 0));
     
-            if(LobbyClient.Status == GameStatus.started)
+            if(LobbyClient.CurrentStatus == GameStatus.started)
             {
-                LobbyClient.Status = GameStatus.waiting; //Change Game Status to Waiting
+                LobbyClient.CurrentStatus = GameStatus.waiting; //Change Game Status to Waiting
                 WriteToServerMidGame(); //Send to Server MidGame End Message.
                 ResetGameLogic(); //Reset Game Logic.
                 UpdateClientsRestart(); //Update Players with Game Restart Notification.
@@ -462,9 +463,9 @@ namespace GameRoomSpace
 
         private void UpdateClientsRestart() //Sends to All Clients a Notification That Game Restarted.
         {
-            lock (LobbyClient.HostClientConnections) //Locks HostClientConnections Incase of new Addition of Clinets While Writing.
+            lock (LobbyClient.ConnectedClientsList) //Locks HostClientConnections Incase of new Addition of Clinets While Writing.
             {
-                foreach(ClientConnection SpecificConnection in LobbyClient.HostClientConnections) //Loops on All Clients Connected.
+                foreach(ClientConnection SpecificConnection in LobbyClient.ConnectedClientsList) //Loops on All Clients Connected.
                 {
                     if(!SpecificConnection.ClientSocket.Poll(1, SelectMode.SelectRead) || (PlayerTwoClient.ClientSocket.Available != 0)) //If Socket is Connected.
                     {
@@ -484,7 +485,7 @@ namespace GameRoomSpace
             string DecodedLocation;
             while (true)
             {
-                lock (LobbyClient.HostClientConnections) lock(MoveStack)
+                lock (LobbyClient.ConnectedClientsList) lock(MoveStack)
                 {
                     if(MoveStack.Count > 0)
                     {
@@ -494,7 +495,7 @@ namespace GameRoomSpace
                             DecodedLocation += (Location + ";");
                         }
                         byte[] EncodedLocation = Encoding.ASCII.GetBytes(DecodedLocation);
-                        foreach(ClientConnection SpecificConnection in LobbyClient.HostClientConnections)
+                        foreach(ClientConnection SpecificConnection in LobbyClient.ConnectedClientsList)
                         {
                             if(!SpecificConnection.ClientSocket.Poll(1, SelectMode.SelectRead) || (SpecificConnection.ClientSocket.Available > 0))
                             {
@@ -543,22 +544,22 @@ namespace GameRoomSpace
         {
             string message = "";
 
-            switch (LobbyClient.LobbyClientRole)
+            switch (LobbyClient.GameClientRole)
             {
                 case LobbyRole.PlayerOne:
                     message = winner == 1 ? "You've Won!" : "You've Lost :(";
-                    WinningDiag = new PlayAgain(this, LobbyClient.LobbyClientRole, message);
+                    WinningDiag = new PlayAgain(this, LobbyClient.GameClientRole, message);
                     WinningDiag.ShowDialog();
                     break;
                 case LobbyRole.PlayerTwo:
                     message = winner == 2 ? "You've Won!" : "You've Lost :(";
-                    WinningDiag = new PlayAgain(this, LobbyClient.LobbyClientRole, message);
+                    WinningDiag = new PlayAgain(this, LobbyClient.GameClientRole, message);
                     WinningDiag.ShowDialog();
                     break;
                 case LobbyRole.Audience:
                     message = winner == 1 ? HostName : PlayerTwo;
                     message += " Has Won!";
-                    WinningDiag = new PlayAgain(this, LobbyClient.LobbyClientRole, message);
+                    WinningDiag = new PlayAgain(this, LobbyClient.GameClientRole, message);
                     WinningDiag.ShowDialog();
                     break;
             }
@@ -572,9 +573,9 @@ namespace GameRoomSpace
             Point p = (Point)Obj;
             byte[] EncodedLocation = Encoding.ASCII.GetBytes($"LocationTwo:{p.X},{p.Y}");
             byte[] EncodedPoint = new byte[265];
-            lock (LobbyClient.HostStream)
+            lock (LobbyClient.ClientToHostStream)
             {
-                LobbyClient.HostStream.Write(EncodedLocation, 0, EncodedLocation.Length);
+                LobbyClient.ClientToHostStream.Write(EncodedLocation, 0, EncodedLocation.Length);
                 this.MouseClick -= Form1_MouseClick;
             }
          

@@ -122,6 +122,7 @@ namespace GameConfig
             this.StartPosition = System.Windows.Forms.FormStartPosition.CenterScreen;
             this.Text = "Connect4";
             this.FormClosing += new System.Windows.Forms.FormClosingEventHandler(this.Lobby_FormClosing);
+            this.VisibleChanged += Lobby_VisibleChanged;
             this.panel1.ResumeLayout(false);
             this.panel1.PerformLayout();
             this.ResumeLayout(false);
@@ -129,6 +130,7 @@ namespace GameConfig
 
         }
 
+   
         #endregion
         private System.Windows.Forms.Button button1;
         private System.Windows.Forms.Label label1;

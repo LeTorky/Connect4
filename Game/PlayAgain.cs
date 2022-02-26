@@ -55,7 +55,7 @@ namespace GameRoomSpace
             switch (ClientRole)
             {
                 case ConnectionClasses.LobbyRole.PlayerOne:
-                    CurrentGame.LobbyClient.Status = ConnectionClasses.GameStatus.waiting;
+                    CurrentGame.LobbyClient.CurrentStatus = ConnectionClasses.GameStatus.waiting;
                     lock (CurrentGame.PlayerTwoClient)
                     {
                         CurrentGame.PlayerTwoClient.ClientStream.Write(EncodedMessage, 0, EncodedMessage.Length);
@@ -64,10 +64,10 @@ namespace GameRoomSpace
                     CurrentGame.MouseClick += CurrentGame.Form1_MouseClick;
                     break;
                 case ConnectionClasses.LobbyRole.PlayerTwo:
-                    CurrentGame.LobbyClient.LobbyClientRole = ConnectionClasses.LobbyRole.Audience;
-                    lock (CurrentGame.LobbyClient.HostStream)
+                    CurrentGame.LobbyClient.GameClientRole = ConnectionClasses.LobbyRole.Audience;
+                    lock (CurrentGame.LobbyClient.ClientToHostStream)
                     {
-                        CurrentGame.LobbyClient.HostStream.Write(EncodedMessage, 0, EncodedMessage.Length);
+                        CurrentGame.LobbyClient.ClientToHostStream.Write(EncodedMessage, 0, EncodedMessage.Length);
                     }
                     break;
             }
@@ -89,7 +89,7 @@ namespace GameRoomSpace
             byte[] EncodedResponse = new byte[256];
             string DecodedResponse;
 
-            switch (CurrentGame.LobbyClient.LobbyClientRole)
+            switch (CurrentGame.LobbyClient.GameClientRole)
             {
                 case ConnectionClasses.LobbyRole.PlayerOne:
                     button2.Enabled = false;
@@ -119,7 +119,7 @@ namespace GameRoomSpace
                         }
                         else
                         {
-                            CurrentGame.LobbyClient.Status = ConnectionClasses.GameStatus.waiting;
+                            CurrentGame.LobbyClient.CurrentStatus = ConnectionClasses.GameStatus.waiting;
                             CurrentGame.listBox1.MouseDoubleClick += CurrentGame.ChoosePlayerTwo;
                             CurrentGame.PlayerTwo = "Waiting...";
                             CurrentGame.label3.Text = "Waiting...";
@@ -130,9 +130,9 @@ namespace GameRoomSpace
 
                 case ConnectionClasses.LobbyRole.PlayerTwo:
                     EncodedMessage = Encoding.ASCII.GetBytes("PlayAgain:Yes");
-                    lock (CurrentGame.LobbyClient.HostStream)
+                    lock (CurrentGame.LobbyClient.ClientToHostStream)
                     {
-                        CurrentGame.LobbyClient.HostStream.Write(EncodedMessage, 0, EncodedMessage.Length);
+                        CurrentGame.LobbyClient.ClientToHostStream.Write(EncodedMessage, 0, EncodedMessage.Length);
                         //Thread.Sleep(500);
                         //CurrentGame.LobbyClient.HostStream.Write(EncodedMessage, 0, EncodedMessage.Length);
                     }
@@ -153,7 +153,7 @@ namespace GameRoomSpace
             {
                 try
                 {
-                    CurrentGame.LobbyClient.HostStream.Read(EncodedResponse, 0, EncodedResponse.Length);
+                    CurrentGame.LobbyClient.ClientToHostStream.Read(EncodedResponse, 0, EncodedResponse.Length);
                 }
                 catch (Exception Exc)
                 {
@@ -162,7 +162,7 @@ namespace GameRoomSpace
                 DecodedResponse = Encoding.ASCII.GetString(EncodedResponse).Trim((char)0);
             }
             while (!DecodedResponse.Contains("PlayAgain:"));
-            CurrentGame.LobbyClient.HostStream.Flush();
+            CurrentGame.LobbyClient.ClientToHostStream.Flush();
             DecodedResponse = DecodedResponse.Split(new string[] { "PlayAgain:" }, StringSplitOptions.RemoveEmptyEntries)[0];
             if (DecodedResponse.Contains("Yes"))
             {

@@ -59,9 +59,9 @@ namespace GameConfig
             this.comboBox1.FormattingEnabled = true;
             this.comboBox1.ItemHeight = 16;
             this.comboBox1.Items.AddRange(new object[] {
-            "4*4",
-            "6*6",
-            "8*8"});
+            "4x4",
+            "5x5",
+            "6x6"});
             this.comboBox1.Location = new System.Drawing.Point(40, 217);
             this.comboBox1.Name = "comboBox1";
             this.comboBox1.Size = new System.Drawing.Size(215, 24);
@@ -119,8 +119,8 @@ namespace GameConfig
             this.comboBox2.FormattingEnabled = true;
             this.comboBox2.ItemHeight = 16;
             this.comboBox2.Items.AddRange(new object[] {
-            "Black",
-            "White"});
+            "LightSeaGreen",
+            "Gold"});
             this.comboBox2.Location = new System.Drawing.Point(40, 293);
             this.comboBox2.Name = "comboBox2";
             this.comboBox2.Size = new System.Drawing.Size(215, 24);

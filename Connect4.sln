@@ -9,7 +9,7 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ConnectionClasses", "Connec
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Lobby", "Lobby\Lobby.csproj", "{89B4ECA5-9715-4FFE-84BE-542BAA569C8B}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Game", "Game\Game.csproj", "{4A8EE1EB-90B7-48B7-8017-55302DCA0392}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GameRoom", "GameRoom\GameRoom.csproj", "{35C0812B-9AD3-4123-A7BC-F8D9ADE6CE0C}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -29,10 +29,10 @@ Global
 		{89B4ECA5-9715-4FFE-84BE-542BAA569C8B}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{89B4ECA5-9715-4FFE-84BE-542BAA569C8B}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{89B4ECA5-9715-4FFE-84BE-542BAA569C8B}.Release|Any CPU.Build.0 = Release|Any CPU
-		{4A8EE1EB-90B7-48B7-8017-55302DCA0392}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{4A8EE1EB-90B7-48B7-8017-55302DCA0392}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{4A8EE1EB-90B7-48B7-8017-55302DCA0392}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{4A8EE1EB-90B7-48B7-8017-55302DCA0392}.Release|Any CPU.Build.0 = Release|Any CPU
+		{35C0812B-9AD3-4123-A7BC-F8D9ADE6CE0C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{35C0812B-9AD3-4123-A7BC-F8D9ADE6CE0C}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{35C0812B-9AD3-4123-A7BC-F8D9ADE6CE0C}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{35C0812B-9AD3-4123-A7BC-F8D9ADE6CE0C}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

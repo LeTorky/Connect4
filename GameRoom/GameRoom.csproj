@@ -4,10 +4,10 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{89B4ECA5-9715-4FFE-84BE-542BAA569C8B}</ProjectGuid>
+    <ProjectGuid>{35C0812B-9AD3-4123-A7BC-F8D9ADE6CE0C}</ProjectGuid>
     <OutputType>WinExe</OutputType>
-    <RootNamespace>GameConfig</RootNamespace>
-    <AssemblyName>GameConfig</AssemblyName>
+    <RootNamespace>GameRoom</RootNamespace>
+    <AssemblyName>GameRoom</AssemblyName>
     <TargetFrameworkVersion>v4.7.2</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
@@ -46,58 +46,49 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Acceptance.cs">
+    <Compile Include="ConfirmPlayerTwo.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="Acceptance.Designer.cs">
-      <DependentUpon>Acceptance.cs</DependentUpon>
+    <Compile Include="ConfirmPlayerTwo.Designer.cs">
+      <DependentUpon>ConfirmPlayerTwo.cs</DependentUpon>
     </Compile>
-    <Compile Include="client.cs">
+    <Compile Include="GameBoard.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="client.Designer.cs">
-      <DependentUpon>client.cs</DependentUpon>
+    <Compile Include="GameBoard.Designer.cs">
+      <DependentUpon>GameBoard.cs</DependentUpon>
     </Compile>
-    <Compile Include="config.cs">
+    <Compile Include="Notifications.cs">
       <SubType>Form</SubType>
     </Compile>
-    <Compile Include="config.Designer.cs">
-      <DependentUpon>config.cs</DependentUpon>
-    </Compile>
-    <Compile Include="lobby.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="lobby.Designer.cs">
-      <DependentUpon>lobby.cs</DependentUpon>
+    <Compile Include="Notifications.Designer.cs">
+      <DependentUpon>Notifications.cs</DependentUpon>
     </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="Room.cs" />
-    <EmbeddedResource Include="Acceptance.resx">
-      <DependentUpon>Acceptance.cs</DependentUpon>
+    <EmbeddedResource Include="ConfirmPlayerTwo.resx">
+      <DependentUpon>ConfirmPlayerTwo.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="client.resx">
-      <DependentUpon>client.cs</DependentUpon>
+    <EmbeddedResource Include="GameBoard.resx">
+      <DependentUpon>GameBoard.cs</DependentUpon>
     </EmbeddedResource>
-    <EmbeddedResource Include="config.resx">
-      <DependentUpon>config.cs</DependentUpon>
-    </EmbeddedResource>
-    <EmbeddedResource Include="lobby.resx">
-      <DependentUpon>lobby.cs</DependentUpon>
+    <EmbeddedResource Include="Notifications.resx">
+      <DependentUpon>Notifications.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="Properties\Resources.resx">
       <Generator>ResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
+      <SubType>Designer</SubType>
     </EmbeddedResource>
+    <Compile Include="Properties\Resources.Designer.cs">
+      <AutoGen>True</AutoGen>
+      <DependentUpon>Resources.resx</DependentUpon>
+      <DesignTime>True</DesignTime>
+    </Compile>
     <None Include="Properties\Settings.settings">
       <Generator>SettingsSingleFileGenerator</Generator>
       <LastGenOutput>Settings.Designer.cs</LastGenOutput>
     </None>
-    <Compile Include="Properties\Resources.Designer.cs">
-      <AutoGen>True</AutoGen>
-      <DesignTime>True</DesignTime>
-      <DependentUpon>Resources.resx</DependentUpon>
-    </Compile>
     <Compile Include="Properties\Settings.Designer.cs">
       <AutoGen>True</AutoGen>
       <DependentUpon>Settings.settings</DependentUpon>
@@ -108,23 +99,13 @@
     <None Include="App.config" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="Resources\logo.png" />
-  </ItemGroup>
-  <ItemGroup>
     <ProjectReference Include="..\ConnectionClasses\ConnectionClasses.csproj">
       <Project>{cb833bf5-438e-4f65-be0d-6e0a56071129}</Project>
       <Name>ConnectionClasses</Name>
     </ProjectReference>
-    <ProjectReference Include="..\GameRoom\GameRoom.csproj">
-      <Project>{35c0812b-9ad3-4123-a7bc-f8d9ade6ce0c}</Project>
-      <Name>GameRoom</Name>
-    </ProjectReference>
   </ItemGroup>
   <ItemGroup>
     <None Include="Resources\Untitled-1.png" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="Resources\Panel.png" />
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>
