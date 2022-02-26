@@ -193,7 +193,6 @@ namespace Server
                                     FileContent = FileContent.Remove(ScoreOneIndex, ScoreArray[0].Length).Insert(ScoreOneIndex, ScoreOne.ToString());
                                     break;
                                 case "2":
-                                Console.WriteLine("2");
                                     ScoreTwo++;
                                     FileContent = FileContent.Remove(ScoreTwoIndex, ScoreArray[1].Length).Insert(ScoreTwoIndex, ScoreTwo.ToString());
                                     break;

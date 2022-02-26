@@ -64,6 +64,12 @@
     <Compile Include="config.Designer.cs">
       <DependentUpon>config.cs</DependentUpon>
     </Compile>
+    <Compile Include="Ipconfig.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Ipconfig.Designer.cs">
+      <DependentUpon>Ipconfig.cs</DependentUpon>
+    </Compile>
     <Compile Include="lobby.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -81,6 +87,9 @@
     </EmbeddedResource>
     <EmbeddedResource Include="config.resx">
       <DependentUpon>config.cs</DependentUpon>
+    </EmbeddedResource>
+    <EmbeddedResource Include="Ipconfig.resx">
+      <DependentUpon>Ipconfig.cs</DependentUpon>
     </EmbeddedResource>
     <EmbeddedResource Include="lobby.resx">
       <DependentUpon>lobby.cs</DependentUpon>

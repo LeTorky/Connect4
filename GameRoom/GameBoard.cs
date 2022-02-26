@@ -269,37 +269,44 @@ namespace GameRoomSpace
         #region Update Player One Player List
         void UpdatePlayerOnePlayerList(object Obj)
         {
-            while (true)
+            try
             {
-                Thread.Sleep(100);
-                string LoadedRooms = "";
-                bool EndGameFlag = true;
-                lock (GameClient.ConnectedClientsList)
+                while (true)
                 {
-                    foreach(ClientConnection SpecificConnection in GameClient.ConnectedClientsList) //For Each Connection in the Client Connected List.
+                    Thread.Sleep(100);
+                    string LoadedRooms = "";
+                    bool EndGameFlag = true;
+                    lock (GameClient.ConnectedClientsList)
                     {
-                        LoadedRooms += SpecificConnection.ClientName + ',';
-                        if(SpecificConnection.ClientSocket.RemoteEndPoint == GameClient.PlayerTwoEndPoint)
+                        foreach(ClientConnection SpecificConnection in GameClient.ConnectedClientsList) //For Each Connection in the Client Connected List.
                         {
-                            EndGameFlag = false; //Prevents Disconnection and Game Re Initialization.
+                            LoadedRooms += SpecificConnection.ClientName + ',';
+                            if(SpecificConnection.ClientSocket.RemoteEndPoint == GameClient.PlayerTwoEndPoint)
+                            {
+                                EndGameFlag = false; //Prevents Disconnection and Game Re Initialization.
+                            }
+                        }
+                        if(LoadedRooms != "")
+                        {
+                            LoadedRooms = LoadedRooms.Remove(LoadedRooms.Length - 1);
+                            CheckAndUpdatePlayerList(LoadedRooms); //Checks Name Differences Between Connection List and Saved Name List.
+                        }
+                        else
+                        {
+                            Thread.Sleep(200); //Waits 0.2 seconds before changing list box with names.
+                            CheckAndUpdatePlayerList(LoadedRooms); //Checks Name Differences Between Connection List and Saved Name List.
+                        }
+                        if(GameClient.PlayerTwoEndPoint != null && EndGameFlag)
+                        {
+                            DisconnectFromPlayerTwo(); //Disconnects From Player Two Host Session.
+                            BeginInvoke((MethodInvoker)InitializeGameBoard); //Begins Initializing Game Board from Start.
                         }
                     }
-                    if(LoadedRooms != "")
-                    {
-                        LoadedRooms = LoadedRooms.Remove(LoadedRooms.Length - 1);
-                        CheckAndUpdatePlayerList(LoadedRooms); //Checks Name Differences Between Connection List and Saved Name List.
-                    }
-                    else
-                    {
-                        Thread.Sleep(200); //Waits 0.2 seconds before changing list box with names.
-                        CheckAndUpdatePlayerList(LoadedRooms); //Checks Name Differences Between Connection List and Saved Name List.
-                    }
-                    if(GameClient.PlayerTwoEndPoint != null && EndGameFlag)
-                    {
-                        DisconnectFromPlayerTwo(); //Disconnects From Player Two Host Session.
-                        BeginInvoke((MethodInvoker)InitializeGameBoard); //Begins Initializing Game Board from Start.
-                    }
                 }
+            }
+            catch(Exception Exc)
+            {
+                Thread.CurrentThread.Abort();
             }
         }
         #endregion
@@ -530,7 +537,7 @@ namespace GameRoomSpace
             GameClient.ClientToHostStream.Close(); //Close Stream with Host.
             GameClient.ClientToHostConnection.Close(); //Closes Connection with Host.
             GameClient.ClientToHostConnection = new TcpClient(); //Creates a new TCP Client.
-            GameClient.ClientToHostConnection.Connect(IPAddress.Parse("192.168.0.106"), 5500); //Reconnects to Server //Change IP to Server IP.
+            GameClient.ClientToHostConnection.Connect(GameClient.ServerIP, 5500); //Reconnects to Server //Change IP to Server IP.
             GameClient.ClientToHostStream = GameClient.ClientToHostConnection.GetStream(); //Gets Server Stream.
             GameClient.LobbyMoveList.Clear(); //Clears Move List for a New Game.
             GameClient.LobbyNameList.Clear(); //Clears Name List for a New Game.

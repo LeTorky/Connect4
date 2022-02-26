@@ -24,13 +24,15 @@ namespace GameConfig
         private GameBoard GameRoom;
         private string[] StoredRooms = null;
         private Notifications Notification;
+        private IPAddress ServerIP;
         #endregion
 
         #region Constructor
-        public Lobby(string SetClientName)
+        public Lobby(string SetClientName, IPAddress SetIPAddress)
         {
             InitializeComponent();
-            LobbyClient = new LobbyClient(IPAddress.Parse("192.168.0.106"), 5500, SetClientName); //Change IP to server IP
+            ServerIP = SetIPAddress;
+            LobbyClient = new LobbyClient(SetIPAddress, 5500, SetClientName); //Change IP to server IP
             label2.Text = LobbyClient.GameClientName;
             ReadFromServerThread = new Thread(ReadHostList);
             ReadFromServerThread.Start();
@@ -101,7 +103,7 @@ namespace GameConfig
             }
             catch(Exception Exc)
             {
-                LobbyClient = new LobbyClient(IPAddress.Parse("192.168.0.106"), 5500, label2.Text); //Change IP to server IP
+                LobbyClient = new LobbyClient(ServerIP, 5500, label2.Text); //Change IP to server IP
                 ReadFromServerThread = new Thread(ReadHostList);
                 ReadFromServerThread.Start();
                 Notification = new Notifications();

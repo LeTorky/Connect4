@@ -63,6 +63,7 @@ namespace ConnectionClasses
     public class LobbyClient
     {
         #region Client Properties
+        public IPAddress ServerIP;
         public TcpClient ClientToHostConnection { get; set; }
         public NetworkStream ClientToHostStream { get; set; }
         public Thread ConnectingToHostOrServerThread { get; set; }
@@ -102,6 +103,7 @@ namespace ConnectionClasses
             CurrentStatus = GameStatus.waiting; //Sets Current Game Status to Waiting.
             LobbyMoveList = new List<string>(); //Creats a List to Hold Game Moves Into.
             LobbyNameList = new List<string>(); //Creats a List To Hold Player Names in Lobby Into.
+            ServerIP = SetIP;
         }
         #endregion
 
