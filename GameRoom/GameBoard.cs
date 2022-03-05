@@ -428,7 +428,10 @@ namespace GameRoomSpace
                     }
                     catch (InvalidOperationException Exc2)
                     {
-                        this.Invoke((MethodInvoker)delegate { this.Close(); });
+                        if (this.IsHandleCreated)
+                        {
+                            this.Invoke((MethodInvoker)delegate { this.Close(); });
+                        }
                         //No need to Act, just to prevent Game from Crashing from Calling a Form via a Disposed Object.
                     }
                 }

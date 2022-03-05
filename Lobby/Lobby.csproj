@@ -46,12 +46,6 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="Acceptance.cs">
-      <SubType>Form</SubType>
-    </Compile>
-    <Compile Include="Acceptance.Designer.cs">
-      <DependentUpon>Acceptance.cs</DependentUpon>
-    </Compile>
     <Compile Include="client.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -79,9 +73,6 @@
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="Room.cs" />
-    <EmbeddedResource Include="Acceptance.resx">
-      <DependentUpon>Acceptance.cs</DependentUpon>
-    </EmbeddedResource>
     <EmbeddedResource Include="client.resx">
       <DependentUpon>client.cs</DependentUpon>
     </EmbeddedResource>
